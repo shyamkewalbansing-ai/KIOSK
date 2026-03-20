@@ -276,6 +276,27 @@ code {
   cursor: not-allowed;
 }
 
+/* Financial card */
+.kiosk-fin-card {
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 24px;
+  padding: 24px;
+  transition: all 0.15s ease;
+}
+.kiosk-fin-card:hover {
+  border-color: #cbd5e1;
+}
+
+/* Bounce slow animation */
+@keyframes bounce-slow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.animate-bounce-slow {
+  animation: bounce-slow 2s ease-in-out infinite;
+}
+
 /* Financial row */
 .kiosk-fin-row {
   display: flex;
@@ -302,6 +323,29 @@ code {
 .keypad-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
+}
+
+/* Input field */
+.kiosk-input {
+  width: 100%;
+  height: 56px;
+  padding: 0 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 16px;
+  font-size: 16px;
+  font-family: 'Manrope', sans-serif;
+  font-weight: 500;
+  color: #0f172a;
+  background: white;
+  outline: none;
+  transition: all 0.15s ease;
+}
+.kiosk-input:focus {
+  border-color: #1e3a8a;
+  box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+}
+.kiosk-input::placeholder {
+  color: #cbd5e1;
 }
 
 .kiosk-keypad-btn {

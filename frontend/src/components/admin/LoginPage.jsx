@@ -1,5 +1,4 @@
 import { Building2, LogIn } from 'lucide-react';
-import { Button } from '../../components/ui/button';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
@@ -22,43 +21,52 @@ export default function LoginPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
-        <div className="animate-spin w-8 h-8 border-4 border-[#1e3a8a] border-t-transparent rounded-full" />
+      <div className="fixed inset-0 flex items-center justify-center bg-white">
+        <div className="kiosk-spinner" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] p-4" data-testid="admin-login-page">
-      <div className="w-full max-w-sm space-y-8">
-        {/* Logo */}
-        <div className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 bg-[#1e3a8a] rounded-2xl flex items-center justify-center shadow-lg">
-            <Building2 className="w-8 h-8 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-[#1e3a8a]" style={{ fontFamily: 'Manrope, sans-serif' }}>
-              Beheerder Portaal
-            </h1>
-            <p className="text-sm text-gray-500 mt-1">Log in om het dashboard te openen</p>
-          </div>
+    <div className="fixed inset-0 bg-white flex" data-testid="admin-login-page">
+      {/* Left panel */}
+      <div className="flex-1 flex flex-col items-center justify-center px-12">
+        <div className="w-20 h-20 bg-[#1e3a8a] rounded-3xl flex items-center justify-center mb-8">
+          <Building2 className="w-10 h-10 text-white" />
         </div>
+        <h1 className="text-4xl xl:text-5xl font-extrabold text-[#0f172a] mb-3" style={{ fontFamily: 'Manrope, sans-serif' }}>
+          Beheerder Portaal
+        </h1>
+        <p className="text-lg text-[#94a3b8] mb-10">Log in om het dashboard te openen</p>
 
-        {/* Login button */}
-        <Button
+        <button
           data-testid="google-login-btn"
           onClick={handleLogin}
-          className="w-full h-14 text-base font-bold bg-[#1e3a8a] hover:bg-[#1e3a8a]/90 text-white rounded-xl shadow-md active:scale-95 transition-transform"
+          className="kiosk-btn-primary"
         >
-          <LogIn className="w-5 h-5 mr-2" />
-          Inloggen met Google
-        </Button>
+          <LogIn className="w-7 h-7 mr-3" />
+          <span>Inloggen met Google</span>
+        </button>
 
-        {/* Back to kiosk */}
-        <div className="text-center">
-          <a href="/" className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
-            Terug naar kiosk
-          </a>
+        <a href="/" className="mt-8 text-sm text-[#94a3b8] hover:text-[#1e3a8a] transition-colors">
+          Terug naar kiosk
+        </a>
+      </div>
+
+      {/* Right panel - decorative */}
+      <div className="hidden lg:flex flex-1 bg-[#1e3a8a] rounded-tl-[60px] items-center justify-center relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-20 right-20 w-96 h-96 bg-white rounded-full" />
+          <div className="absolute bottom-10 left-10 w-72 h-72 bg-[#f97316] rounded-full" />
+        </div>
+        <div className="relative z-10 text-white text-center px-12">
+          <Building2 className="w-24 h-24 mx-auto mb-8 opacity-90" />
+          <h2 className="text-3xl font-bold mb-4" style={{ fontFamily: 'Manrope, sans-serif' }}>
+            Appartement Kiosk
+          </h2>
+          <p className="text-lg opacity-80 max-w-sm mx-auto">
+            Beheer huurders, appartementen en betalingen
+          </p>
         </div>
       </div>
     </div>

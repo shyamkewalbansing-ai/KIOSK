@@ -1,9 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
-import { Card, CardContent } from '../../components/ui/card';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { toast } from 'sonner';
 import axios from 'axios';
@@ -25,11 +21,8 @@ export default function ApartmentManagement() {
     try {
       const res = await axios.get(`${API}/apartments`, { withCredentials: true });
       setApartments(res.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -42,25 +35,13 @@ export default function ApartmentManagement() {
 
   const openEdit = (apt) => {
     setEditApt(apt);
-    setForm({
-      number: apt.number,
-      floor: apt.floor || 0,
-      monthly_rent: apt.monthly_rent,
-      service_costs: apt.service_costs,
-      description: apt.description || '',
-    });
+    setForm({ number: apt.number, floor: apt.floor || 0, monthly_rent: apt.monthly_rent, service_costs: apt.service_costs, description: apt.description || '' });
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
     try {
-      const payload = {
-        number: form.number,
-        floor: parseInt(form.floor) || 0,
-        monthly_rent: parseFloat(form.monthly_rent) || 0,
-        service_costs: parseFloat(form.service_costs) || 0,
-        description: form.description,
-      };
+      const payload = { number: form.number, floor: parseInt(form.floor) || 0, monthly_rent: parseFloat(form.monthly_rent) || 0, service_costs: parseFloat(form.service_costs) || 0, description: form.description };
       if (editApt) {
         await axios.put(`${API}/apartments/${editApt.apartment_id}`, payload, { withCredentials: true });
         toast.success('Appartement bijgewerkt');
@@ -70,9 +51,7 @@ export default function ApartmentManagement() {
       }
       setDialogOpen(false);
       fetchData();
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Fout bij opslaan');
-    }
+    } catch (err) { toast.error(err.response?.data?.detail || 'Fout bij opslaan'); }
   };
 
   const handleDelete = async (aptId) => {
@@ -81,105 +60,109 @@ export default function ApartmentManagement() {
       await axios.delete(`${API}/apartments/${aptId}`, { withCredentials: true });
       toast.success('Appartement verwijderd');
       fetchData();
-    } catch (err) {
-      toast.error('Fout bij verwijderen');
-    }
+    } catch { toast.error('Fout bij verwijderen'); }
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="animate-spin w-8 h-8 border-4 border-[#1e3a8a] border-t-transparent rounded-full" />
-      </div>
-    );
+    return <div className="flex items-center justify-center h-full"><div className="kiosk-spinner" /></div>;
   }
 
   return (
-    <div className="space-y-4" data-testid="apartment-management">
+    <div className="space-y-6" data-testid="apartment-management">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">{apartments.length} appartement(en)</p>
-        <Button data-testid="add-apartment-btn" onClick={openCreate} className="bg-[#1e3a8a] hover:bg-[#1e3a8a]/90 text-white rounded-xl h-10">
-          <Plus className="w-4 h-4 mr-2" /> Nieuw appartement
-        </Button>
+        <p className="text-lg text-[#64748b] font-medium">{apartments.length} appartement(en)</p>
+        <button data-testid="add-apartment-btn" onClick={openCreate} className="kiosk-tab kiosk-tab-active">
+          <Plus className="w-5 h-5 mr-2" /> Nieuw appartement
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {apartments.map((apt) => (
-          <Card key={apt.apartment_id} className="border border-gray-200 shadow-sm rounded-2xl" data-testid={`apt-card-${apt.apartment_id}`}>
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-xl font-bold text-[#1e3a8a]">{apt.number}</h3>
-                  <p className="text-xs text-gray-500">Verdieping {apt.floor}</p>
-                </div>
-                <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                  apt.status === 'occupied' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-                }`}>
-                  {apt.status === 'occupied' ? 'Bewoond' : 'Leeg'}
-                </span>
+          <div
+            key={apt.apartment_id}
+            className="bg-white rounded-2xl border-2 border-[#e2e8f0] p-6 hover:border-[#cbd5e1] transition-colors"
+            data-testid={`apt-card-${apt.apartment_id}`}
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <h3 className="text-3xl font-extrabold text-[#1e3a8a]">{apt.number}</h3>
+                <p className="text-sm text-[#94a3b8]">Verdieping {apt.floor}</p>
               </div>
-              {apt.description && <p className="text-xs text-gray-500 mt-2">{apt.description}</p>}
-              <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-100">
-                <div>
-                  <p className="text-xs text-gray-500">Maandhuur</p>
-                  <p className="text-sm font-bold text-gray-900">{formatSRD(apt.monthly_rent)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Servicekosten</p>
-                  <p className="text-sm font-bold text-gray-900">{formatSRD(apt.service_costs)}</p>
-                </div>
+              <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${
+                apt.status === 'occupied' ? 'bg-[#dcfce7] text-[#166534]' : 'bg-[#f1f5f9] text-[#94a3b8]'
+              }`}>
+                {apt.status === 'occupied' ? 'Bewoond' : 'Leeg'}
+              </span>
+            </div>
+
+            {apt.description && <p className="text-sm text-[#94a3b8] mb-3">{apt.description}</p>}
+
+            <div className="grid grid-cols-2 gap-3 pt-3 border-t border-[#f1f5f9]">
+              <div className="bg-[#f8fafc] rounded-xl p-3 text-center">
+                <p className="text-xs text-[#94a3b8]">Maandhuur</p>
+                <p className="text-base font-extrabold text-[#0f172a]">{formatSRD(apt.monthly_rent)}</p>
               </div>
-              <div className="flex gap-1 mt-3">
-                <Button variant="ghost" size="sm" onClick={() => openEdit(apt)} data-testid={`edit-apt-${apt.apartment_id}`}>
-                  <Pencil className="w-4 h-4 text-gray-500" />
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => handleDelete(apt.apartment_id)} data-testid={`delete-apt-${apt.apartment_id}`}>
-                  <Trash2 className="w-4 h-4 text-red-500" />
-                </Button>
+              <div className="bg-[#f8fafc] rounded-xl p-3 text-center">
+                <p className="text-xs text-[#94a3b8]">Service</p>
+                <p className="text-base font-extrabold text-[#0f172a]">{formatSRD(apt.service_costs)}</p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+
+            <div className="flex gap-1 mt-3">
+              <button className="kiosk-btn-icon w-10 h-10" onClick={() => openEdit(apt)} data-testid={`edit-apt-${apt.apartment_id}`}>
+                <Pencil className="w-4 h-4" />
+              </button>
+              <button className="kiosk-btn-icon w-10 h-10 text-[#dc2626] border-red-200 hover:bg-red-50" onClick={() => handleDelete(apt.apartment_id)} data-testid={`delete-apt-${apt.apartment_id}`}>
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         ))}
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="rounded-2xl" data-testid="apartment-dialog">
+        <DialogContent className="rounded-3xl max-w-lg" data-testid="apartment-dialog">
           <DialogHeader>
-            <DialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>
+            <DialogTitle className="text-2xl font-extrabold" style={{ fontFamily: 'Manrope, sans-serif' }}>
               {editApt ? 'Appartement bewerken' : 'Nieuw appartement'}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 py-2">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Nummer</Label>
-                <Input data-testid="apt-number-input" value={form.number} onChange={(e) => setForm({...form, number: e.target.value})} placeholder="bijv. A101" />
+                <label className="text-sm font-bold text-[#64748b] mb-1 block">Nummer</label>
+                <input data-testid="apt-number-input" value={form.number} onChange={(e) => setForm({...form, number: e.target.value})}
+                  className="kiosk-input" placeholder="bijv. A101" />
               </div>
               <div>
-                <Label>Verdieping</Label>
-                <Input data-testid="apt-floor-input" type="number" value={form.floor} onChange={(e) => setForm({...form, floor: e.target.value})} />
+                <label className="text-sm font-bold text-[#64748b] mb-1 block">Verdieping</label>
+                <input data-testid="apt-floor-input" type="number" value={form.floor} onChange={(e) => setForm({...form, floor: e.target.value})}
+                  className="kiosk-input" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Maandhuur (SRD)</Label>
-                <Input data-testid="apt-rent-input" type="number" value={form.monthly_rent} onChange={(e) => setForm({...form, monthly_rent: e.target.value})} />
+                <label className="text-sm font-bold text-[#64748b] mb-1 block">Maandhuur (SRD)</label>
+                <input data-testid="apt-rent-input" type="number" value={form.monthly_rent} onChange={(e) => setForm({...form, monthly_rent: e.target.value})}
+                  className="kiosk-input" />
               </div>
               <div>
-                <Label>Servicekosten (SRD)</Label>
-                <Input data-testid="apt-service-input" type="number" value={form.service_costs} onChange={(e) => setForm({...form, service_costs: e.target.value})} />
+                <label className="text-sm font-bold text-[#64748b] mb-1 block">Servicekosten (SRD)</label>
+                <input data-testid="apt-service-input" type="number" value={form.service_costs} onChange={(e) => setForm({...form, service_costs: e.target.value})}
+                  className="kiosk-input" />
               </div>
             </div>
             <div>
-              <Label>Omschrijving</Label>
-              <Input data-testid="apt-desc-input" value={form.description} onChange={(e) => setForm({...form, description: e.target.value})} placeholder="bijv. 3-kamer met balkon" />
+              <label className="text-sm font-bold text-[#64748b] mb-1 block">Omschrijving</label>
+              <input data-testid="apt-desc-input" value={form.description} onChange={(e) => setForm({...form, description: e.target.value})}
+                className="kiosk-input" placeholder="bijv. 3-kamer met balkon" />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Annuleren</Button>
-            <Button data-testid="save-apt-btn" onClick={handleSave} className="bg-[#1e3a8a] hover:bg-[#1e3a8a]/90 text-white">
+          <DialogFooter className="gap-2">
+            <button onClick={() => setDialogOpen(false)} className="kiosk-btn-secondary h-14 px-8 text-base">Annuleren</button>
+            <button data-testid="save-apt-btn" onClick={handleSave} className="kiosk-btn-primary h-14 px-8 text-base">
               {editApt ? 'Bijwerken' : 'Aanmaken'}
-            </Button>
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

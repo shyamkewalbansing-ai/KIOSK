@@ -307,9 +307,15 @@ async def create_payment(data: PaymentCreate):
     }
     await db.payments.insert_one(doc)
     # Update tenant balances
+    apt = await db.apartments.find_one({"apartment_id": tenant["apartment_id"]}, {"_id": 0})
     if data.payment_type in ["rent", "partial_rent"]:
         new_rent = max(0, tenant["outstanding_rent"] - data.amount)
-        await db.tenants.update_one({"tenant_id": data.tenant_id}, {"$set": {"outstanding_rent": new_rent}})
+        update_fields = {"outstanding_rent": new_rent}
+        # Auto-add next month rent + service costs when fully paid
+        if new_rent == 0 and apt:
+            update_fields["outstanding_rent"] = apt["monthly_rent"]
+            update_fields["service_costs"] = (tenant.get("service_costs", 0) or 0) + apt.get("service_costs", 0)
+        await db.tenants.update_one({"tenant_id": data.tenant_id}, {"$set": update_fields})
     elif data.payment_type == "service_costs":
         new_sc = max(0, tenant["service_costs"] - data.amount)
         await db.tenants.update_one({"tenant_id": data.tenant_id}, {"$set": {"service_costs": new_sc}})

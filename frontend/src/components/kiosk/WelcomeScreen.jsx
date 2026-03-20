@@ -1,8 +1,8 @@
-import { Building2, ArrowRight, Banknote, Droplets, Receipt } from 'lucide-react';
+import { Building2, ArrowRight, Banknote, Droplets, Receipt, Settings } from 'lucide-react';
 
 export default function WelcomeScreen({ onStart }) {
   return (
-    <div className="kiosk-root bg-white flex flex-col" data-testid="welcome-screen">
+    <div className="kiosk-root bg-white" data-testid="welcome-screen">
       {/* Top bar */}
       <div className="kiosk-topbar">
         <div className="flex items-center gap-4">
@@ -13,9 +13,19 @@ export default function WelcomeScreen({ onStart }) {
             Appartement Kiosk
           </span>
         </div>
-        <span className="text-base text-[#64748b]">
-          {new Date().toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-        </span>
+        <div className="flex items-center gap-4">
+          <span className="text-base text-[#94a3b8]">
+            {new Date().toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+          </span>
+          <a
+            href="/admin/login"
+            data-testid="admin-login-link"
+            className="kiosk-btn-icon w-11 h-11 opacity-40 hover:opacity-100 transition-opacity"
+            title="Beheerder"
+          >
+            <Settings className="w-5 h-5" />
+          </a>
+        </div>
       </div>
 
       {/* Main content - split layout */}
@@ -61,7 +71,7 @@ export default function WelcomeScreen({ onStart }) {
       </div>
 
       {/* Bottom options */}
-      <div className="border-t border-[#e2e8f0] bg-[#f8fafc] px-16 py-6">
+      <div className="border-t border-[#e2e8f0] bg-[#f8fafc] px-16 py-6 flex-shrink-0">
         <p className="text-sm text-[#94a3b8] uppercase tracking-widest font-bold mb-4">Beschikbare diensten</p>
         <div className="flex gap-4">
           {[

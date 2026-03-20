@@ -1,9 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, Phone, Mail, AlertTriangle } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
+import { Plus, Pencil, Trash2, Phone, Mail, AlertTriangle, DollarSign } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { toast } from 'sonner';
@@ -63,19 +59,14 @@ export default function TenantManagement() {
     try {
       if (editTenant) {
         await axios.put(`${API}/tenants/${editTenant.tenant_id}`, {
-          name: form.name,
-          phone: form.phone,
-          email: form.email,
+          name: form.name, phone: form.phone, email: form.email,
           deposit_required: parseFloat(form.deposit_required) || 0,
           deposit_paid: parseFloat(form.deposit_paid) || 0,
         }, { withCredentials: true });
         toast.success('Huurder bijgewerkt');
       } else {
         await axios.post(`${API}/tenants`, {
-          name: form.name,
-          apartment_id: form.apartment_id,
-          phone: form.phone,
-          email: form.email,
+          name: form.name, apartment_id: form.apartment_id, phone: form.phone, email: form.email,
           deposit_required: parseFloat(form.deposit_required) || 0,
           deposit_paid: parseFloat(form.deposit_paid) || 0,
         }, { withCredentials: true });
@@ -94,16 +85,17 @@ export default function TenantManagement() {
       await axios.delete(`${API}/tenants/${tenantId}`, { withCredentials: true });
       toast.success('Huurder verwijderd');
       fetchData();
-    } catch (err) {
+    } catch {
       toast.error('Fout bij verwijderen');
     }
   };
 
   const handleAddRent = async (tenant) => {
     try {
+      const aptServiceCosts = apartments.find(a => a.apartment_id === tenant.apartment_id)?.service_costs || 0;
       await axios.put(`${API}/tenants/${tenant.tenant_id}`, {
         outstanding_rent: (tenant.outstanding_rent || 0) + tenant.monthly_rent,
-        service_costs: (tenant.service_costs || 0) + (apartments.find(a => a.apartment_id === tenant.apartment_id)?.service_costs || 0),
+        service_costs: (tenant.service_costs || 0) + aptServiceCosts,
       }, { withCredentials: true });
       toast.success(`Maandhuur toegevoegd voor ${tenant.name}`);
       fetchData();
@@ -115,111 +107,125 @@ export default function TenantManagement() {
   const vacantApartments = apartments.filter(a => a.status === 'vacant');
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="animate-spin w-8 h-8 border-4 border-[#1e3a8a] border-t-transparent rounded-full" />
-      </div>
-    );
+    return <div className="flex items-center justify-center h-full"><div className="kiosk-spinner" /></div>;
   }
 
   return (
-    <div className="space-y-4" data-testid="tenant-management">
+    <div className="space-y-6" data-testid="tenant-management">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">{tenants.length} huurder(s)</p>
-        <Button data-testid="add-tenant-btn" onClick={openCreate} className="bg-[#1e3a8a] hover:bg-[#1e3a8a]/90 text-white rounded-xl h-10">
-          <Plus className="w-4 h-4 mr-2" /> Nieuwe huurder
-        </Button>
+        <p className="text-lg text-[#64748b] font-medium">{tenants.length} huurder(s) geregistreerd</p>
+        <button data-testid="add-tenant-btn" onClick={openCreate} className="kiosk-tab kiosk-tab-active">
+          <Plus className="w-5 h-5 mr-2" /> Nieuwe huurder
+        </button>
       </div>
 
-      <div className="grid gap-3">
-        {tenants.map((t) => (
-          <Card key={t.tenant_id} className="border border-gray-200 shadow-sm rounded-2xl" data-testid={`tenant-card-${t.tenant_id}`}>
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <h3 className="font-bold text-gray-900">{t.name}</h3>
-                  <p className="text-xs text-gray-500">
-                    Appt. {t.apartment_number} | Code: {t.tenant_code} | Status: {t.status}
-                  </p>
-                  <div className="flex gap-3 text-xs text-gray-400 mt-1">
-                    {t.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{t.phone}</span>}
-                    {t.email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{t.email}</span>}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        {tenants.map((t) => {
+          const total = (t.outstanding_rent || 0) + (t.service_costs || 0) + (t.fines || 0);
+          return (
+            <div
+              key={t.tenant_id}
+              className="bg-white rounded-2xl border-2 border-[#e2e8f0] p-6 hover:border-[#cbd5e1] transition-colors"
+              data-testid={`tenant-card-${t.tenant_id}`}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-[#1e3a8a] rounded-2xl flex items-center justify-center text-white font-extrabold text-xl">
+                    {t.name?.charAt(0)}
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-extrabold text-[#0f172a]">{t.name}</h3>
+                    <p className="text-sm text-[#94a3b8]">
+                      Appt. {t.apartment_number} &middot; {t.tenant_code} &middot;
+                      <span className={t.status === 'active' ? 'text-[#16a34a] font-bold' : 'text-[#94a3b8]'}> {t.status === 'active' ? 'Actief' : 'Inactief'}</span>
+                    </p>
+                    <div className="flex gap-4 text-sm text-[#94a3b8] mt-1">
+                      {t.phone && <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" />{t.phone}</span>}
+                      {t.email && <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5" />{t.email}</span>}
+                    </div>
                   </div>
                 </div>
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="sm" onClick={() => openEdit(t)} data-testid={`edit-tenant-${t.tenant_id}`}>
-                    <Pencil className="w-4 h-4 text-gray-500" />
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(t.tenant_id)} data-testid={`delete-tenant-${t.tenant_id}`}>
-                    <Trash2 className="w-4 h-4 text-red-500" />
-                  </Button>
+                  <button className="kiosk-btn-icon w-10 h-10" onClick={() => openEdit(t)} data-testid={`edit-tenant-${t.tenant_id}`}>
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button className="kiosk-btn-icon w-10 h-10 text-[#dc2626] border-red-200 hover:bg-red-50" onClick={() => handleDelete(t.tenant_id)} data-testid={`delete-tenant-${t.tenant_id}`}>
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-gray-100">
-                <div>
-                  <p className="text-xs text-gray-500">Openstaande huur</p>
-                  <p className={`text-sm font-bold ${t.outstanding_rent > 0 ? 'text-red-600' : 'text-green-600'}`}>
+
+              {/* Financial grid */}
+              <div className="grid grid-cols-4 gap-3 pt-4 border-t border-[#f1f5f9]">
+                <div className="bg-[#f8fafc] rounded-xl p-3 text-center">
+                  <p className="text-xs text-[#94a3b8]">Huur</p>
+                  <p className={`text-sm font-extrabold ${t.outstanding_rent > 0 ? 'text-[#dc2626]' : 'text-[#16a34a]'}`}>
                     {formatSRD(t.outstanding_rent)}
                   </p>
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500">Servicekosten</p>
-                  <p className={`text-sm font-bold ${t.service_costs > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                <div className="bg-[#f8fafc] rounded-xl p-3 text-center">
+                  <p className="text-xs text-[#94a3b8]">Service</p>
+                  <p className={`text-sm font-extrabold ${t.service_costs > 0 ? 'text-[#ea580c]' : 'text-[#16a34a]'}`}>
                     {formatSRD(t.service_costs)}
                   </p>
                 </div>
-                <div>
-                  <p className="text-xs text-gray-500">Boetes</p>
-                  <p className={`text-sm font-bold ${t.fines > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                <div className="bg-[#f8fafc] rounded-xl p-3 text-center">
+                  <p className="text-xs text-[#94a3b8]">Boetes</p>
+                  <p className={`text-sm font-extrabold ${t.fines > 0 ? 'text-[#dc2626]' : 'text-[#16a34a]'}`}>
                     {formatSRD(t.fines)}
                   </p>
                 </div>
+                <div className="bg-[#1e3a8a]/5 rounded-xl p-3 text-center">
+                  <p className="text-xs text-[#94a3b8]">Totaal</p>
+                  <p className="text-sm font-extrabold text-[#1e3a8a]">{formatSRD(total)}</p>
+                </div>
               </div>
-              <div className="mt-3 flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
+
+              {/* Actions */}
+              <div className="flex items-center gap-3 mt-4">
+                <button
                   onClick={() => handleAddRent(t)}
-                  className="text-xs"
+                  className="kiosk-tab text-sm h-10"
                   data-testid={`add-rent-${t.tenant_id}`}
                 >
-                  + Maandhuur toevoegen
-                </Button>
+                  <DollarSign className="w-4 h-4 mr-1" /> + Maandhuur
+                </button>
                 {t.outstanding_rent > t.monthly_rent && (
-                  <span className="flex items-center text-xs text-amber-600 gap-1">
-                    <AlertTriangle className="w-3 h-3" /> Achterstand
+                  <span className="flex items-center text-sm text-[#d97706] font-bold gap-1">
+                    <AlertTriangle className="w-4 h-4" /> Achterstand
                   </span>
                 )}
               </div>
-            </CardContent>
-          </Card>
-        ))}
+            </div>
+          );
+        })}
       </div>
 
       {/* Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="rounded-2xl" data-testid="tenant-dialog">
+        <DialogContent className="rounded-3xl max-w-lg" data-testid="tenant-dialog">
           <DialogHeader>
-            <DialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>
+            <DialogTitle className="text-2xl font-extrabold" style={{ fontFamily: 'Manrope, sans-serif' }}>
               {editTenant ? 'Huurder bewerken' : 'Nieuwe huurder'}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 py-2">
             <div>
-              <Label>Naam</Label>
-              <Input data-testid="tenant-name-input" value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} />
+              <label className="text-sm font-bold text-[#64748b] mb-1 block">Naam</label>
+              <input data-testid="tenant-name-input" value={form.name} onChange={(e) => setForm({...form, name: e.target.value})}
+                className="kiosk-input" placeholder="Volledige naam" />
             </div>
             {!editTenant && (
               <div>
-                <Label>Appartement</Label>
+                <label className="text-sm font-bold text-[#64748b] mb-1 block">Appartement</label>
                 <Select value={form.apartment_id} onValueChange={(v) => setForm({...form, apartment_id: v})}>
-                  <SelectTrigger data-testid="tenant-apartment-select">
+                  <SelectTrigger data-testid="tenant-apartment-select" className="h-14 rounded-xl border-2 text-base">
                     <SelectValue placeholder="Kies appartement" />
                   </SelectTrigger>
                   <SelectContent>
                     {vacantApartments.map(a => (
                       <SelectItem key={a.apartment_id} value={a.apartment_id}>
-                        {a.number} - {formatSRD(a.monthly_rent)}/mnd
+                        {a.number} — {formatSRD(a.monthly_rent)}/mnd
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -228,30 +234,34 @@ export default function TenantManagement() {
             )}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Telefoon</Label>
-                <Input data-testid="tenant-phone-input" value={form.phone} onChange={(e) => setForm({...form, phone: e.target.value})} />
+                <label className="text-sm font-bold text-[#64748b] mb-1 block">Telefoon</label>
+                <input data-testid="tenant-phone-input" value={form.phone} onChange={(e) => setForm({...form, phone: e.target.value})}
+                  className="kiosk-input" placeholder="+597 ..." />
               </div>
               <div>
-                <Label>E-mail</Label>
-                <Input data-testid="tenant-email-input" value={form.email} onChange={(e) => setForm({...form, email: e.target.value})} />
+                <label className="text-sm font-bold text-[#64748b] mb-1 block">E-mail</label>
+                <input data-testid="tenant-email-input" value={form.email} onChange={(e) => setForm({...form, email: e.target.value})}
+                  className="kiosk-input" placeholder="email@..." />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Borg vereist (SRD)</Label>
-                <Input data-testid="deposit-required-input" type="number" value={form.deposit_required} onChange={(e) => setForm({...form, deposit_required: e.target.value})} />
+                <label className="text-sm font-bold text-[#64748b] mb-1 block">Borg vereist (SRD)</label>
+                <input data-testid="deposit-required-input" type="number" value={form.deposit_required}
+                  onChange={(e) => setForm({...form, deposit_required: e.target.value})} className="kiosk-input" />
               </div>
               <div>
-                <Label>Borg betaald (SRD)</Label>
-                <Input data-testid="deposit-paid-input" type="number" value={form.deposit_paid} onChange={(e) => setForm({...form, deposit_paid: e.target.value})} />
+                <label className="text-sm font-bold text-[#64748b] mb-1 block">Borg betaald (SRD)</label>
+                <input data-testid="deposit-paid-input" type="number" value={form.deposit_paid}
+                  onChange={(e) => setForm({...form, deposit_paid: e.target.value})} className="kiosk-input" />
               </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Annuleren</Button>
-            <Button data-testid="save-tenant-btn" onClick={handleSave} className="bg-[#1e3a8a] hover:bg-[#1e3a8a]/90 text-white">
+          <DialogFooter className="gap-2">
+            <button onClick={() => setDialogOpen(false)} className="kiosk-btn-secondary h-14 px-8 text-base">Annuleren</button>
+            <button data-testid="save-tenant-btn" onClick={handleSave} className="kiosk-btn-primary h-14 px-8 text-base">
               {editTenant ? 'Bijwerken' : 'Aanmaken'}
-            </Button>
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -1,8 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CreditCard, Search, Download } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Input } from '../../components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
+import { CreditCard, Search } from 'lucide-react';
 import axios from 'axios';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -29,11 +26,8 @@ export default function PaymentHistory() {
       try {
         const res = await axios.get(`${API}/payments`, { withCredentials: true });
         setPayments(res.data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
+      } catch (err) { console.error(err); }
+      finally { setLoading(false); }
     };
     fetchPayments();
   }, []);
@@ -47,80 +41,68 @@ export default function PaymentHistory() {
   const totalAmount = filtered.reduce((sum, p) => sum + (p.amount || 0), 0);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="animate-spin w-8 h-8 border-4 border-[#1e3a8a] border-t-transparent rounded-full" />
-      </div>
-    );
+    return <div className="flex items-center justify-center h-full"><div className="kiosk-spinner" /></div>;
   }
 
   return (
-    <div className="space-y-4" data-testid="payment-history">
-      {/* Search & total */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input
+    <div className="space-y-6" data-testid="payment-history">
+      {/* Search & summary */}
+      <div className="flex items-center gap-4 flex-wrap">
+        <div className="relative flex-1 min-w-[280px]">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#94a3b8]" />
+          <input
             data-testid="payment-search-input"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Zoek op naam, appartement, bonnr..."
-            className="pl-9 h-10 rounded-xl"
+            placeholder="Zoek op naam, appartement, bonnummer..."
+            className="kiosk-input pl-12"
           />
         </div>
-        <div className="text-right">
-          <p className="text-xs text-gray-500">Totaal ({filtered.length} betalingen)</p>
-          <p className="text-lg font-bold text-green-700">{formatSRD(totalAmount)}</p>
+        <div className="bg-white rounded-2xl border-2 border-[#e2e8f0] px-6 py-3 text-right">
+          <p className="text-xs text-[#94a3b8]">{filtered.length} betalingen</p>
+          <p className="text-xl font-extrabold text-[#166534]">{formatSRD(totalAmount)}</p>
         </div>
       </div>
 
-      {/* Table */}
-      <Card className="border border-gray-200 shadow-sm rounded-2xl overflow-hidden">
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-gray-50">
-                <TableHead className="text-xs font-bold">Datum</TableHead>
-                <TableHead className="text-xs font-bold">Huurder</TableHead>
-                <TableHead className="text-xs font-bold">Appt.</TableHead>
-                <TableHead className="text-xs font-bold">Type</TableHead>
-                <TableHead className="text-xs font-bold">Bonnr.</TableHead>
-                <TableHead className="text-xs font-bold text-right">Bedrag</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-10 text-gray-400">
-                    Geen betalingen gevonden
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filtered.map((p) => (
-                  <TableRow key={p.payment_id} data-testid={`payment-row-${p.payment_id}`} className="hover:bg-gray-50">
-                    <TableCell className="text-xs text-gray-600">
-                      {new Date(p.created_at).toLocaleDateString('nl-NL')}
-                      <br />
-                      <span className="text-gray-400">
-                        {new Date(p.created_at).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </TableCell>
-                    <TableCell className="font-semibold text-sm">{p.tenant_name}</TableCell>
-                    <TableCell className="text-sm">{p.apartment_number}</TableCell>
-                    <TableCell>
-                      <span className="text-xs font-medium px-2 py-1 bg-blue-50 text-[#1e3a8a] rounded-full">
-                        {TYPE_LABELS[p.payment_type] || p.payment_type}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-xs font-mono text-gray-500">{p.receipt_number}</TableCell>
-                    <TableCell className="text-right font-bold text-green-700">{formatSRD(p.amount)}</TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      {/* Payment list */}
+      {filtered.length === 0 ? (
+        <div className="bg-white rounded-2xl border-2 border-[#e2e8f0] p-12 text-center">
+          <p className="text-[#94a3b8] text-lg">Geen betalingen gevonden</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map((p) => (
+            <div
+              key={p.payment_id}
+              className="bg-white rounded-2xl border-2 border-[#e2e8f0] px-6 py-4 flex items-center justify-between hover:border-[#cbd5e1] transition-colors"
+              data-testid={`payment-row-${p.payment_id}`}
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-[#eff6ff] rounded-xl flex items-center justify-center flex-shrink-0">
+                  <CreditCard className="w-6 h-6 text-[#1e3a8a]" />
+                </div>
+                <div>
+                  <p className="text-base font-bold text-[#0f172a]">{p.tenant_name}</p>
+                  <p className="text-sm text-[#94a3b8]">
+                    Appt. {p.apartment_number} &middot; {TYPE_LABELS[p.payment_type] || p.payment_type}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-6">
+                <span className="text-xs font-mono text-[#94a3b8] bg-[#f8fafc] px-3 py-1.5 rounded-lg">
+                  {p.receipt_number}
+                </span>
+                <div className="text-right min-w-[120px]">
+                  <p className="text-lg font-extrabold text-[#166534]">{formatSRD(p.amount)}</p>
+                  <p className="text-xs text-[#94a3b8]">
+                    {new Date(p.created_at).toLocaleDateString('nl-NL')} {new Date(p.created_at).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
