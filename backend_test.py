@@ -129,23 +129,31 @@ class KioskBackendTester:
             self.log_result("GET /api/tenants/lookup/A101", False, f"Failed with status {status}")
     
     def test_payments_endpoint(self):
-        """Test payment creation"""
-        print("\n💰 Testing Payment Endpoints...")
+        """Test payment creation with kwitantie functionality"""
+        print("\n💰 Testing Payment Endpoints (Kwitantie Focus)...")
         
-        # Test payment creation
+        # Test payment creation with kwitantie number generation
         payment_data = {
             "tenant_id": "ten_001",
             "amount": 1000.0,
             "payment_type": "rent",
             "payment_method": "cash",
-            "description": "Test payment for rent"
+            "description": "Test payment for rent kwitantie"
         }
         
         response = self.make_request('POST', 'payments', payment_data)
         if response and response.status_code == 200:
             payment = response.json()
+            kwitantie_nr = payment.get('kwitantie_nummer', '')
+            
+            # Test kwitantie number has KW- prefix
+            if kwitantie_nr.startswith('KW-'):
+                self.log_result("Kwitantie number format", True, f"Kwitantie generated with KW- prefix: {kwitantie_nr}")
+            else:
+                self.log_result("Kwitantie number format", False, f"Missing KW- prefix. Got: {kwitantie_nr}")
+            
             if payment.get('amount') == 1000.0 and payment.get('tenant_name') == 'Radjesh Kanhai':
-                self.log_result("POST /api/payments", True, f"Payment created with receipt: {payment.get('receipt_number')}")
+                self.log_result("POST /api/payments", True, f"Payment created with kwitantie: {kwitantie_nr}")
                 
                 # Verify tenant balance was updated
                 tenant_response = self.make_request('GET', 'tenants/ten_001')
@@ -170,11 +178,64 @@ class KioskBackendTester:
             payments = response.json()
             if isinstance(payments, list):
                 self.log_result("GET /api/payments", True, f"Retrieved {len(payments)} payments")
+                
+                # Verify all payments have kwitantie numbers
+                kwitantie_count = sum(1 for p in payments if p.get('kwitantie_nummer', '').startswith('KW-'))
+                self.log_result("All payments have kwitantie numbers", 
+                    kwitantie_count == len(payments), 
+                    f"{kwitantie_count}/{len(payments)} payments have KW- kwitantie numbers")
             else:
                 self.log_result("GET /api/payments", False, "Invalid payments response")
         else:
             status = response.status_code if response else 'No response'
             self.log_result("GET /api/payments", False, f"Failed with status {status}")
+
+    def test_auto_billing_after_full_payment(self):
+        """Test auto-billing functionality after full rent payment"""
+        print("\n🔄 Testing Auto-Billing After Full Payment...")
+        
+        # First get tenant's current outstanding rent
+        tenant_response = self.make_request('GET', 'tenants/ten_002')  # Maria Janssen
+        if not tenant_response or tenant_response.status_code != 200:
+            self.log_result("Auto-billing setup", False, "Could not fetch tenant data")
+            return
+            
+        tenant = tenant_response.json()
+        initial_rent = tenant.get('outstanding_rent', 0)
+        monthly_rent = tenant.get('monthly_rent', 0)
+        
+        # Make full rent payment
+        payment_data = {
+            "tenant_id": "ten_002",
+            "amount": initial_rent,  # Pay full outstanding amount
+            "payment_type": "rent",
+            "payment_method": "cash",
+            "description": "Full rent payment for auto-billing test"
+        }
+        
+        payment_response = self.make_request('POST', 'payments', payment_data)
+        if payment_response and payment_response.status_code == 200:
+            payment = payment_response.json()
+            self.log_result("Full rent payment", True, f"Paid SRD {initial_rent} - Kwitantie: {payment.get('kwitantie_nummer')}")
+            
+            # Check if auto-billing added next month's rent
+            updated_tenant_response = self.make_request('GET', 'tenants/ten_002')
+            if updated_tenant_response and updated_tenant_response.status_code == 200:
+                updated_tenant = updated_tenant_response.json()
+                new_rent = updated_tenant.get('outstanding_rent', 0)
+                
+                # Should auto-add next month's rent
+                if new_rent == monthly_rent:
+                    self.log_result("Auto-billing functionality", True, 
+                        f"Next month rent auto-added: SRD {new_rent}")
+                else:
+                    self.log_result("Auto-billing functionality", False, 
+                        f"Expected {monthly_rent}, got {new_rent}")
+            else:
+                self.log_result("Auto-billing verification", False, "Could not verify auto-billing")
+        else:
+            status = payment_response.status_code if payment_response else 'No response'
+            self.log_result("Full rent payment", False, f"Payment failed with status {status}")
     
     def test_dashboard_stats(self):
         """Test dashboard statistics"""
@@ -262,6 +323,7 @@ def main():
     tester.test_apartments_endpoints()
     tester.test_tenants_endpoints()
     tester.test_payments_endpoint()
+    tester.test_auto_billing_after_full_payment()
     tester.test_dashboard_stats()
     tester.test_breakers_endpoints()
     
