@@ -112,7 +112,7 @@ export default function Dashboard() {
                 </div>
                 <div className="text-right">
                   <p className="text-lg font-extrabold text-[#166534]">{formatSRD(p.amount)}</p>
-                  <p className="text-xs text-[#94a3b8] font-mono">{p.receipt_number}</p>
+                  <p className="text-xs text-[#94a3b8] font-mono">{p.kwitantie_nummer || p.receipt_number}</p>
                 </div>
               </div>
             ))}

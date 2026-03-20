@@ -9,7 +9,7 @@ const NAV_ITEMS = [
   { id: 'dashboard', path: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'tenants', path: '/admin/tenants', label: 'Huurders', icon: Users },
   { id: 'apartments', path: '/admin/apartments', label: 'Appartementen', icon: Building2 },
-  { id: 'payments', path: '/admin/payments', label: 'Betalingen', icon: CreditCard },
+  { id: 'payments', path: '/admin/payments', label: 'Kwitanties', icon: CreditCard },
   { id: 'breakers', path: '/admin/breakers', label: 'Stroombrekers', icon: Zap },
 ];
 

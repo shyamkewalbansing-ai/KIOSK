@@ -291,18 +291,21 @@ async def create_payment(data: PaymentCreate):
     if not tenant:
         raise HTTPException(status_code=404, detail="Huurder niet gevonden")
     payment_id = f"pay_{uuid.uuid4().hex[:8]}"
-    receipt_number = f"BON-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{uuid.uuid4().hex[:4].upper()}"
+    kwitantie_nr = f"KW-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{uuid.uuid4().hex[:4].upper()}"
     doc = {
         "payment_id": payment_id,
         "tenant_id": data.tenant_id,
         "tenant_name": tenant["name"],
         "tenant_code": tenant["tenant_code"],
         "apartment_number": tenant["apartment_number"],
+        "apartment_id": tenant["apartment_id"],
+        "monthly_rent": tenant.get("monthly_rent", 0),
         "amount": data.amount,
         "payment_type": data.payment_type,
         "payment_method": data.payment_method,
         "description": data.description,
-        "receipt_number": receipt_number,
+        "kwitantie_nummer": kwitantie_nr,
+        "receipt_number": kwitantie_nr,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.payments.insert_one(doc)
