@@ -51,6 +51,13 @@ Self-service kiosk system for apartment buildings in Suriname where tenants can 
 - Admin dashboard redesigned to match kiosk style (horizontal tabs, large cards)
 - On-screen keypad for tenant code entry
 
+### V1.2 - Kwitantie Systeem (March 20, 2026)
+- "Bon" volledig vervangen door "Kwitantie" door hele systeem
+- Moderne A4 kwitantie met geometrische hoekvormen (blauw + oranje clipPath)
+- Professionele tabel layout, oranje totaal balk, bedrijfsstempel
+- Kwitantie-nummering KW- prefix, admin kwitantie-dialoog met print
+- Countdown timer (8s) met auto-redirect op receipt scherm
+
 ## Prioritized Backlog
 ### P0 (Critical)
 - None remaining for MVP
