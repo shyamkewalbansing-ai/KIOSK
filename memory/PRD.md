@@ -38,8 +38,18 @@ Self-service kiosk system for apartment buildings in Suriname where tenants can 
 - Receipt printing with thermal printer styling
 - Tuya breaker mock panel with toggle switches
 - All backend APIs with proper MongoDB integration
-- Step indicator for kiosk wizard flow
 - Responsive design with mobile support
+
+### V1.1 - Kiosk Mode Redesign (March 20, 2026)
+- Full-screen kiosk mode for ALL screens (like Albert Heijn self-checkout)
+- Split-panel layouts with large touch-friendly buttons
+- Modern tenant overview with 4 financial breakdown cards
+- Modern payment confirm with split layout (amount left, confirm right)
+- Auto-print receipt + auto-redirect to welcome screen
+- Auto monthly rent billing (next month auto-added after full payment)
+- Admin login button (gear icon) on kiosk welcome screen
+- Admin dashboard redesigned to match kiosk style (horizontal tabs, large cards)
+- On-screen keypad for tenant code entry
 
 ## Prioritized Backlog
 ### P0 (Critical)
