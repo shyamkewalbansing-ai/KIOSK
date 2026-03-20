@@ -1,53 +1,88 @@
-import { Building2, ArrowRight } from 'lucide-react';
-import { Button } from '../../components/ui/button';
+import { Building2, ArrowRight, Banknote, Droplets, Receipt } from 'lucide-react';
 
 export default function WelcomeScreen({ onStart }) {
   return (
-    <div className="text-center space-y-8 py-8" data-testid="welcome-screen">
-      {/* Hero */}
-      <div className="space-y-4">
-        <div className="mx-auto w-20 h-20 bg-[#1e3a8a] rounded-2xl flex items-center justify-center shadow-lg">
-          <Building2 className="w-10 h-10 text-white" />
-        </div>
-        <h1
-          className="text-4xl sm:text-5xl lg:text-6xl font-bold text-[#1e3a8a] tracking-tight"
-          style={{ fontFamily: 'Manrope, sans-serif' }}
-        >
-          Welkom
-        </h1>
-        <p className="text-base md:text-lg text-gray-500 max-w-sm mx-auto">
-          Betaal uw huur, servicekosten en meer via deze zelfbedieningskiosk
-        </p>
-      </div>
-
-      {/* Action */}
-      <div className="space-y-4">
-        <Button
-          data-testid="start-payment-btn"
-          onClick={onStart}
-          className="h-16 px-12 text-xl font-bold uppercase tracking-wide bg-[#f97316] hover:bg-[#ea580c] text-white rounded-xl shadow-md active:scale-95 transition-transform duration-100"
-        >
-          Start Betaling
-          <ArrowRight className="ml-3 w-6 h-6" />
-        </Button>
-        <p className="text-sm text-gray-400">Druk op de knop om te beginnen</p>
-      </div>
-
-      {/* Info cards */}
-      <div className="grid grid-cols-3 gap-3 pt-4">
-        {[
-          { label: 'Huur', desc: 'Maandhuur betalen' },
-          { label: 'Kosten', desc: 'Water & stroom' },
-          { label: 'Boetes', desc: 'Achterstand betalen' },
-        ].map((item) => (
-          <div
-            key={item.label}
-            className="bg-white rounded-xl border border-gray-200 p-4 text-center"
-          >
-            <p className="font-bold text-[#1e3a8a] text-sm">{item.label}</p>
-            <p className="text-xs text-gray-400 mt-1">{item.desc}</p>
+    <div className="kiosk-root bg-white flex flex-col" data-testid="welcome-screen">
+      {/* Top bar */}
+      <div className="kiosk-topbar">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-[#f97316] rounded-2xl flex items-center justify-center">
+            <Building2 className="w-7 h-7 text-white" />
           </div>
-        ))}
+          <span className="text-2xl font-extrabold tracking-tight text-[#1e3a8a]" style={{ fontFamily: 'Manrope, sans-serif' }}>
+            Appartement Kiosk
+          </span>
+        </div>
+        <span className="text-base text-[#64748b]">
+          {new Date().toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+        </span>
+      </div>
+
+      {/* Main content - split layout */}
+      <div className="flex-1 flex">
+        {/* Left panel - Main CTA */}
+        <div className="flex-1 flex flex-col justify-center px-16 xl:px-24">
+          <h1
+            className="text-5xl xl:text-7xl font-extrabold text-[#0f172a] leading-tight tracking-tight"
+            style={{ fontFamily: 'Manrope, sans-serif' }}
+          >
+            Welkom
+          </h1>
+          <p className="text-xl xl:text-2xl text-[#64748b] mt-4 max-w-lg leading-relaxed">
+            Betaal uw huur, servicekosten en meer via deze zelfbedieningskiosk.
+          </p>
+
+          <button
+            data-testid="start-payment-btn"
+            onClick={onStart}
+            className="mt-10 kiosk-btn-primary w-fit"
+          >
+            <span>Start</span>
+            <ArrowRight className="w-8 h-8 ml-4" />
+          </button>
+        </div>
+
+        {/* Right panel - Visual */}
+        <div className="hidden lg:flex flex-1 bg-[#1e3a8a] rounded-tl-[60px] items-center justify-center relative overflow-hidden">
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-20 right-20 w-80 h-80 bg-white rounded-full" />
+            <div className="absolute bottom-10 left-10 w-60 h-60 bg-[#f97316] rounded-full" />
+          </div>
+          <div className="relative z-10 text-center text-white px-12">
+            <Building2 className="w-24 h-24 mx-auto mb-8 opacity-90" />
+            <h2 className="text-3xl xl:text-4xl font-bold mb-6" style={{ fontFamily: 'Manrope, sans-serif' }}>
+              Huurbetalingen
+            </h2>
+            <p className="text-lg opacity-80 max-w-sm mx-auto">
+              Snel, eenvoudig en veilig uw huur betalen
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom options */}
+      <div className="border-t border-[#e2e8f0] bg-[#f8fafc] px-16 py-6">
+        <p className="text-sm text-[#94a3b8] uppercase tracking-widest font-bold mb-4">Beschikbare diensten</p>
+        <div className="flex gap-4">
+          {[
+            { icon: Banknote, label: 'Maandhuur', desc: 'Volledige of gedeeltelijke huur' },
+            { icon: Droplets, label: 'Servicekosten', desc: 'Water, stroom & overige' },
+            { icon: Receipt, label: 'Boetes & Achterstand', desc: 'Openstaande bedragen' },
+          ].map((item) => (
+            <div
+              key={item.label}
+              className="flex items-center gap-4 bg-white rounded-2xl border border-[#e2e8f0] px-6 py-4 flex-1"
+            >
+              <div className="w-12 h-12 bg-[#eff6ff] rounded-xl flex items-center justify-center flex-shrink-0">
+                <item.icon className="w-6 h-6 text-[#1e3a8a]" />
+              </div>
+              <div>
+                <p className="font-bold text-[#0f172a] text-sm">{item.label}</p>
+                <p className="text-xs text-[#94a3b8]">{item.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

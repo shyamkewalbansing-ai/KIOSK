@@ -1,61 +1,59 @@
 import { CheckCircle, Printer, RotateCcw } from 'lucide-react';
-import { Button } from '../../components/ui/button';
 import ReceiptTicket from '../shared/ReceiptTicket';
 
 export default function ReceiptScreen({ payment, tenant, onDone }) {
   if (!payment) return null;
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const handlePrint = () => window.print();
 
   return (
-    <div className="space-y-6" data-testid="receipt-screen">
-      {/* Success banner */}
-      <div className="text-center space-y-3">
-        <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-          <CheckCircle className="w-10 h-10 text-green-600" />
-        </div>
-        <h2 className="text-2xl md:text-3xl font-bold text-green-700" style={{ fontFamily: 'Manrope, sans-serif' }}>
-          Betaling geslaagd!
-        </h2>
-        <p className="text-gray-500 text-sm">Bonnummer: <span className="font-mono font-bold">{payment.receipt_number}</span></p>
-      </div>
+    <div className="kiosk-root bg-white flex flex-col" data-testid="receipt-screen">
+      {/* Content */}
+      <div className="flex-1 flex">
+        {/* Left - Success */}
+        <div className="flex-1 flex flex-col items-center justify-center px-12">
+          <div className="w-28 h-28 bg-[#dcfce7] rounded-full flex items-center justify-center mb-8">
+            <CheckCircle className="w-16 h-16 text-[#16a34a]" />
+          </div>
+          <h1 className="text-4xl xl:text-5xl font-extrabold text-[#166534] mb-4" style={{ fontFamily: 'Manrope, sans-serif' }}>
+            Betaling geslaagd!
+          </h1>
+          <p className="text-lg text-[#64748b] mb-2">
+            Bonnummer: <span className="font-mono font-bold text-[#0f172a]">{payment.receipt_number}</span>
+          </p>
 
-      {/* Receipt preview (visible on screen) */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-dashed border-gray-200 bg-gray-50 text-center">
-          <p className="text-xs text-gray-500 uppercase tracking-wide font-bold">Bon voorbeeld</p>
+          <div className="flex gap-4 mt-10 w-full max-w-md">
+            <button
+              data-testid="print-receipt-btn"
+              onClick={handlePrint}
+              className="kiosk-btn-primary flex-1"
+            >
+              <Printer className="w-7 h-7 mr-3" />
+              <span>Bon printen</span>
+            </button>
+            <button
+              data-testid="done-btn"
+              onClick={onDone}
+              className="kiosk-btn-secondary flex-1"
+            >
+              <RotateCcw className="w-7 h-7 mr-3" />
+              <span>Klaar</span>
+            </button>
+          </div>
         </div>
-        <div className="p-6">
-          <ReceiptTicket payment={payment} tenant={tenant} preview />
+
+        {/* Right - Receipt preview */}
+        <div className="hidden lg:flex w-[400px] bg-[#f8fafc] border-l border-[#e2e8f0] flex-col items-center justify-center p-8">
+          <p className="text-xs uppercase tracking-widest text-[#94a3b8] font-bold mb-6">Bon voorbeeld</p>
+          <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-sm p-6 w-full max-w-[300px]">
+            <ReceiptTicket payment={payment} tenant={tenant} preview />
+          </div>
         </div>
       </div>
 
       {/* Hidden receipt for printing */}
       <div className="receipt-only">
         <ReceiptTicket payment={payment} tenant={tenant} />
-      </div>
-
-      {/* Actions */}
-      <div className="space-y-3">
-        <Button
-          data-testid="print-receipt-btn"
-          onClick={handlePrint}
-          className="w-full h-16 text-xl font-bold bg-[#1e3a8a] hover:bg-[#1e3a8a]/90 text-white rounded-xl shadow-md active:scale-95 transition-transform"
-        >
-          <Printer className="w-6 h-6 mr-3" />
-          Bon printen
-        </Button>
-        <Button
-          data-testid="done-btn"
-          onClick={onDone}
-          variant="outline"
-          className="w-full h-16 text-xl font-bold border-2 border-gray-200 text-gray-700 rounded-xl active:scale-95 transition-transform hover:bg-gray-50"
-        >
-          <RotateCcw className="w-6 h-6 mr-3" />
-          Nieuwe betaling
-        </Button>
       </div>
     </div>
   );

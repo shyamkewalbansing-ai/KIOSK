@@ -10,12 +10,14 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: #f8fafc;
+  overflow: hidden;
 }
 
 code {
   font-family: 'JetBrains Mono', monospace;
 }
 
+/* ============ CSS VARIABLES ============ */
 @layer base {
   :root {
     --background: 210 40% 98%;
@@ -43,40 +45,287 @@ code {
     --chart-4: 142 71% 45%;
     --chart-5: 0 84% 60%;
     --radius: 0.75rem;
-    --success: 142 71% 45%;
-    --warning: 45 93% 58%;
   }
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
+  * { @apply border-border; }
+  body { @apply bg-background text-foreground; }
 }
 
 @layer base {
-  [data-debug-wrapper="true"] {
-    display: contents !important;
-  }
+  [data-debug-wrapper="true"] { display: contents !important; }
   [data-debug-wrapper="true"] > * {
-    margin-left: inherit;
-    margin-right: inherit;
-    margin-top: inherit;
-    margin-bottom: inherit;
-    padding-left: inherit;
-    padding-right: inherit;
-    padding-top: inherit;
-    padding-bottom: inherit;
-    column-gap: inherit;
-    row-gap: inherit;
-    gap: inherit;
+    margin-left: inherit; margin-right: inherit; margin-top: inherit; margin-bottom: inherit;
+    padding-left: inherit; padding-right: inherit; padding-top: inherit; padding-bottom: inherit;
+    column-gap: inherit; row-gap: inherit; gap: inherit;
   }
 }
 
-/* Receipt print styles */
+/* ============ KIOSK CORE STYLES ============ */
+
+.kiosk-root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.kiosk-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 32px;
+  border-bottom: 1px solid #e2e8f0;
+  background: white;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.kiosk-btn-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  border: 2px solid #e2e8f0;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: #0f172a;
+}
+.kiosk-btn-icon:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+.kiosk-btn-icon:active {
+  transform: scale(0.93);
+}
+
+.kiosk-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 72px;
+  padding: 0 48px;
+  background: #f97316;
+  color: white;
+  font-family: 'Manrope', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 4px 14px rgba(249, 115, 22, 0.3);
+  letter-spacing: 0.02em;
+}
+.kiosk-btn-primary:hover {
+  background: #ea580c;
+  box-shadow: 0 6px 20px rgba(249, 115, 22, 0.4);
+}
+.kiosk-btn-primary:active {
+  transform: scale(0.96);
+}
+
+.kiosk-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 72px;
+  padding: 0 36px;
+  background: white;
+  color: #0f172a;
+  font-family: 'Manrope', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  border: 2px solid #e2e8f0;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.kiosk-btn-secondary:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+.kiosk-btn-secondary:active {
+  transform: scale(0.96);
+}
+
+.kiosk-btn-confirm {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 80px;
+  padding: 0 48px;
+  background: #16a34a;
+  color: white;
+  font-family: 'Manrope', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.3);
+}
+.kiosk-btn-confirm:hover {
+  background: #15803d;
+}
+.kiosk-btn-confirm:active {
+  transform: scale(0.96);
+}
+.kiosk-btn-processing {
+  background: #2563eb;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+}
+
+.kiosk-tab {
+  display: inline-flex;
+  align-items: center;
+  height: 48px;
+  padding: 0 20px;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 15px;
+  border: 2px solid #e2e8f0;
+  background: white;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.kiosk-tab:hover {
+  border-color: #cbd5e1;
+}
+.kiosk-tab-active {
+  background: #1e3a8a;
+  border-color: #1e3a8a;
+  color: white;
+}
+
+/* Apartment cards */
+.kiosk-apt-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  border-radius: 20px;
+  border: 3px solid transparent;
+  transition: all 0.15s ease;
+  min-height: 140px;
+}
+.kiosk-apt-card-active {
+  background: white;
+  border-color: #e2e8f0;
+  color: #1e3a8a;
+  cursor: pointer;
+}
+.kiosk-apt-card-active:hover {
+  border-color: #1e3a8a;
+  box-shadow: 0 4px 20px rgba(30, 58, 138, 0.12);
+  transform: translateY(-2px);
+}
+.kiosk-apt-card-active:active {
+  transform: scale(0.96);
+}
+.kiosk-apt-card-disabled {
+  background: #f8fafc;
+  border-color: #f1f5f9;
+  color: #cbd5e1;
+  cursor: not-allowed;
+}
+
+/* Payment option cards */
+.kiosk-option-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+  border-radius: 24px;
+  border: 3px solid transparent;
+  transition: all 0.15s ease;
+}
+.kiosk-option-default {
+  background: white;
+  border-color: #e2e8f0;
+  color: #0f172a;
+  cursor: pointer;
+}
+.kiosk-option-default:hover {
+  border-color: #94a3b8;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+}
+.kiosk-option-default:active {
+  transform: scale(0.97);
+}
+.kiosk-option-selected {
+  background: #eff6ff;
+  border-color: #1e3a8a;
+  color: #0f172a;
+  box-shadow: 0 4px 20px rgba(30, 58, 138, 0.12);
+}
+.kiosk-option-disabled {
+  background: #f8fafc;
+  border-color: #f1f5f9;
+  color: #cbd5e1;
+  cursor: not-allowed;
+}
+
+/* Financial row */
+.kiosk-fin-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+/* Spinner */
+.kiosk-spinner {
+  width: 48px;
+  height: 48px;
+  border: 5px solid #e2e8f0;
+  border-top-color: #1e3a8a;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Keypad */
+.keypad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.kiosk-keypad-btn {
+  height: 64px;
+  border-radius: 16px;
+  border: 2px solid #e2e8f0;
+  font-family: 'Manrope', sans-serif;
+  font-weight: 800;
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.kiosk-keypad-btn:active {
+  transform: scale(0.92);
+}
+
+/* ============ RECEIPT PRINT ============ */
+.receipt-only {
+  display: none;
+}
+
 @media print {
   @page {
     size: 80mm auto;
@@ -85,44 +334,20 @@ code {
   body * {
     visibility: hidden !important;
   }
-  .receipt-only,
-  .receipt-only * {
-    visibility: visible !important;
-  }
   .receipt-only {
+    display: block !important;
+    visibility: visible !important;
     position: absolute;
     left: 0;
     top: 0;
     width: 80mm;
   }
+  .receipt-only * {
+    visibility: visible !important;
+  }
 }
 
-/* Kiosk animations */
-.kiosk-slide-enter {
-  opacity: 0;
-  transform: translateX(40px);
-}
-.kiosk-slide-enter-active {
-  opacity: 1;
-  transform: translateX(0);
-  transition: opacity 300ms ease, transform 300ms ease;
-}
-
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #f1f5f9;
-}
-::-webkit-scrollbar-thumb {
-  background: #94a3b8;
-  border-radius: 3px;
-}
-
-/* Number keypad grid */
-.keypad-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
+/* ============ ADMIN SCROLLBAR ============ */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #f1f5f9; }
+::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }

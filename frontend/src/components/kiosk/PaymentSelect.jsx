@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, ArrowRight, Banknote, Droplets, AlertCircle, Wallet } from 'lucide-react';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
+import { ArrowLeft, ArrowRight, Banknote, Wallet, Droplets, AlertCircle } from 'lucide-react';
 
 function formatSRD(amount) {
   return `SRD ${Number(amount).toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -9,9 +7,9 @@ function formatSRD(amount) {
 
 const PAYMENT_TYPES = [
   { id: 'rent', label: 'Volledige huur', icon: Banknote, desc: 'Betaal het volledige openstaande huurbedrag' },
-  { id: 'partial_rent', label: 'Gedeeltelijke betaling', icon: Wallet, desc: 'Betaal een deel van de huur' },
+  { id: 'partial_rent', label: 'Gedeeltelijk', icon: Wallet, desc: 'Betaal een deel van de huur' },
   { id: 'service_costs', label: 'Servicekosten', icon: Droplets, desc: 'Water, stroom en overige kosten' },
-  { id: 'fines', label: 'Boetes / Achterstand', icon: AlertCircle, desc: 'Betaal openstaande boetes' },
+  { id: 'fines', label: 'Boetes', icon: AlertCircle, desc: 'Openstaande boetes betalen' },
 ];
 
 export default function PaymentSelect({ tenant, onBack, onConfirm }) {
@@ -37,7 +35,6 @@ export default function PaymentSelect({ tenant, onBack, onConfirm }) {
   const handleConfirm = () => {
     let amount = 0;
     let description = '';
-
     if (selectedType === 'rent') {
       amount = tenant.outstanding_rent;
       description = 'Volledige huurbetaling';
@@ -52,103 +49,122 @@ export default function PaymentSelect({ tenant, onBack, onConfirm }) {
       amount = tenant.fines;
       description = 'Boetes betaling';
     }
-
-    onConfirm({
-      payment_type: selectedType === 'partial_rent' ? 'partial_rent' : selectedType,
-      amount,
-      description,
-      payment_method: 'cash',
-    });
+    onConfirm({ payment_type: selectedType, amount, description, payment_method: 'cash' });
   };
 
   const canProceed = selectedType && (selectedType !== 'partial_rent' || (customAmount && parseFloat(customAmount) > 0 && parseFloat(customAmount) <= tenant.outstanding_rent));
 
+  const handleKeypadPress = (val) => {
+    if (val === 'DEL') {
+      setCustomAmount(prev => prev.slice(0, -1));
+    } else if (val === '.') {
+      if (!customAmount.includes('.')) setCustomAmount(prev => prev + '.');
+    } else {
+      setCustomAmount(prev => prev + val);
+    }
+  };
+
   return (
-    <div className="space-y-6" data-testid="payment-select">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <Button data-testid="back-to-overview-btn" variant="ghost" onClick={onBack} className="h-12 w-12 rounded-xl">
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <h2 className="text-2xl md:text-3xl font-bold text-[#1e3a8a]" style={{ fontFamily: 'Manrope, sans-serif' }}>
-          Wat wilt u betalen?
-        </h2>
+    <div className="kiosk-root bg-white flex flex-col" data-testid="payment-select">
+      {/* Top bar */}
+      <div className="kiosk-topbar">
+        <div className="flex items-center gap-4">
+          <button data-testid="back-to-overview-btn" onClick={onBack} className="kiosk-btn-icon">
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+          <h1 className="text-2xl xl:text-3xl font-extrabold text-[#0f172a]" style={{ fontFamily: 'Manrope, sans-serif' }}>
+            Wat wilt u betalen?
+          </h1>
+        </div>
+        <div className="text-right">
+          <p className="text-sm text-[#94a3b8]">{tenant.name}</p>
+          <p className="text-sm font-bold text-[#1e3a8a]">Appt. {tenant.apartment_number}</p>
+        </div>
       </div>
 
-      {/* Payment options */}
-      <div className="space-y-3">
-        {PAYMENT_TYPES.map((type) => {
-          const disabled = isTypeDisabled(type.id);
-          const isSelected = selectedType === type.id;
-          const amount = getAmountForType(type.id);
-          const Icon = type.icon;
+      {/* Content */}
+      <div className="flex-1 flex">
+        {/* Left - Options */}
+        <div className="flex-1 p-8 flex flex-col">
+          <div className="grid grid-cols-2 gap-4 flex-1">
+            {PAYMENT_TYPES.map((type) => {
+              const disabled = isTypeDisabled(type.id);
+              const isSelected = selectedType === type.id;
+              const amount = getAmountForType(type.id);
+              const Icon = type.icon;
 
-          return (
+              return (
+                <button
+                  key={type.id}
+                  data-testid={`payment-type-${type.id}`}
+                  disabled={disabled}
+                  onClick={() => setSelectedType(type.id)}
+                  className={`kiosk-option-card ${
+                    disabled ? 'kiosk-option-disabled' :
+                    isSelected ? 'kiosk-option-selected' : 'kiosk-option-default'
+                  }`}
+                >
+                  <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-3 ${
+                    isSelected ? 'bg-[#1e3a8a] text-white' : disabled ? 'bg-gray-100 text-gray-300' : 'bg-[#eff6ff] text-[#1e3a8a]'
+                  }`}>
+                    <Icon className="w-8 h-8" />
+                  </div>
+                  <span className="text-lg font-bold">{type.label}</span>
+                  <span className="text-sm opacity-60 mt-1">{type.desc}</span>
+                  {type.id !== 'partial_rent' && (
+                    <span className={`text-xl font-extrabold mt-3 ${disabled ? 'text-gray-300' : 'text-[#1e3a8a]'}`}>
+                      {formatSRD(amount)}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Confirm button */}
+          <div className="mt-6">
             <button
-              key={type.id}
-              data-testid={`payment-type-${type.id}`}
-              disabled={disabled}
-              onClick={() => setSelectedType(type.id)}
-              className={`w-full p-4 rounded-xl border-2 text-left transition-all active:scale-[0.98] flex items-center gap-4 ${
-                disabled
-                  ? 'bg-gray-50 border-gray-100 text-gray-400 cursor-not-allowed'
-                  : isSelected
-                  ? 'bg-blue-50 border-[#1e3a8a] shadow-sm'
-                  : 'bg-white border-gray-200 hover:border-gray-300 cursor-pointer'
-              }`}
+              data-testid="confirm-payment-type-btn"
+              disabled={!canProceed}
+              onClick={handleConfirm}
+              className={`kiosk-btn-primary w-full ${!canProceed ? 'opacity-40 cursor-not-allowed' : ''}`}
             >
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                isSelected ? 'bg-[#1e3a8a] text-white' : disabled ? 'bg-gray-100 text-gray-400' : 'bg-gray-100 text-gray-600'
-              }`}>
-                <Icon className="w-6 h-6" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className={`font-bold text-base ${disabled ? 'text-gray-400' : 'text-gray-900'}`}>{type.label}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{type.desc}</p>
-              </div>
-              {type.id !== 'partial_rent' && (
-                <span className={`font-bold text-sm whitespace-nowrap ${disabled ? 'text-gray-400' : 'text-[#1e3a8a]'}`}>
-                  {formatSRD(amount)}
-                </span>
-              )}
+              <span>Volgende</span>
+              <ArrowRight className="w-7 h-7 ml-4" />
             </button>
-          );
-        })}
-      </div>
-
-      {/* Custom amount for partial */}
-      {selectedType === 'partial_rent' && (
-        <div className="bg-white rounded-xl border-2 border-gray-200 p-4 space-y-3" data-testid="partial-payment-section">
-          <p className="text-sm text-gray-600">
-            Maximaal: <span className="font-bold text-[#1e3a8a]">{formatSRD(tenant.outstanding_rent)}</span>
-          </p>
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-bold text-gray-500">SRD</span>
-            <Input
-              data-testid="custom-amount-input"
-              type="number"
-              value={customAmount}
-              onChange={(e) => setCustomAmount(e.target.value)}
-              placeholder="0.00"
-              max={tenant.outstanding_rent}
-              min={0}
-              step="0.01"
-              className="h-14 text-xl font-bold text-center rounded-xl border-2"
-            />
           </div>
         </div>
-      )}
 
-      {/* Confirm */}
-      <Button
-        data-testid="confirm-payment-type-btn"
-        disabled={!canProceed}
-        onClick={handleConfirm}
-        className="w-full h-16 text-xl font-bold bg-[#f97316] hover:bg-[#ea580c] text-white rounded-xl shadow-md active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        Volgende
-        <ArrowRight className="w-6 h-6 ml-3" />
-      </Button>
+        {/* Right - Custom amount (only for partial) */}
+        {selectedType === 'partial_rent' && (
+          <div className="w-[400px] bg-[#f8fafc] border-l border-[#e2e8f0] p-8 flex flex-col" data-testid="partial-payment-section">
+            <h3 className="text-lg font-bold text-[#0f172a] mb-2">Bedrag invoeren</h3>
+            <p className="text-sm text-[#94a3b8] mb-4">Max: {formatSRD(tenant.outstanding_rent)}</p>
+
+            <div className="bg-white rounded-2xl border-2 border-[#e2e8f0] p-5 text-center mb-4">
+              <span className="text-sm text-[#94a3b8]">SRD</span>
+              <div className="text-4xl font-extrabold text-[#0f172a] font-mono mt-1" data-testid="custom-amount-display">
+                {customAmount || '0.00'}
+              </div>
+            </div>
+
+            <div className="keypad-grid gap-2 flex-1">
+              {['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'DEL'].map((key) => (
+                <button
+                  key={key}
+                  data-testid={`amount-key-${key}`}
+                  onClick={() => handleKeypadPress(key)}
+                  className={`kiosk-keypad-btn text-lg ${
+                    key === 'DEL' ? 'bg-[#fee2e2] text-[#dc2626]' : 'bg-white text-[#0f172a]'
+                  }`}
+                >
+                  {key}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
