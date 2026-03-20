@@ -1,0 +1,155 @@
+{
+  "project_name": "Apartment Rent Payment Kiosk",
+  "design_philosophy": {
+    "identity": "E1 - The Anti-AI Designer",
+    "core_principles": [
+      "Clarity over Decoration: For the Kiosk, if it doesn't help the user pay, remove it.",
+      "Touch-First Physics: Buttons must feel 'pressable'. Use active states aggressively.",
+      "The 'Dutch' Cleanliness: Minimalist, bold, organized, efficient.",
+      "Trust through Consistency: The Admin dashboard and Kiosk must feel like the same ecosystem."
+    ],
+    "emotional_tone": {
+      "kiosk": "Welcoming, Simple, Patient, trustworthy",
+      "admin": "Commanding, Dense, Informative, Efficient"
+    }
+  },
+  "typography": {
+    "font_family": {
+      "headings": "Manrope, sans-serif",
+      "body": "Inter, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "scale": {
+      "kiosk_heading": "text-4xl md:text-6xl font-bold tracking-tight",
+      "kiosk_subheading": "text-2xl md:text-3xl font-medium text-muted-foreground",
+      "kiosk_button": "text-xl font-bold uppercase tracking-wide",
+      "admin_heading": "text-2xl font-semibold tracking-tight",
+      "receipt_text": "text-[12px] leading-tight font-mono"
+    },
+    "instructions": "Use Manrope for all headings to give a modern, friendly character. Use Inter for all input fields and tables for maximum legibility. Use JetBrains Mono exclusively for the Receipt component."
+  },
+  "colors": {
+    "palette": {
+      "primary": {
+        "DEFAULT": "#1e3a8a",
+        "foreground": "#ffffff",
+        "description": "Deep Royal Blue - Trust, Authority, Corporate"
+      },
+      "secondary": {
+        "DEFAULT": "#f97316",
+        "foreground": "#ffffff",
+        "description": "Dutch Orange - High Visibility, Action, Warmth (Use for 'Pay Now' buttons)"
+      },
+      "accent": {
+        "DEFAULT": "#fcd34d",
+        "foreground": "#1e293b",
+        "description": "Warm Yellow - Highlights, Focus states"
+      },
+      "background": "#f8fafc",
+      "surface": "#ffffff",
+      "border": "#e2e8f0",
+      "success": "#22c55e",
+      "error": "#ef4444"
+    },
+    "usage_rules": [
+      "KIOSK: Use Orange (#f97316) for the PRIMARY action (Next, Pay). Use Blue (#1e3a8a) for branding headers.",
+      "ADMIN: Use Blue (#1e3a8a) for the Sidebar and Primary Buttons. Use subtle grays for backgrounds.",
+      "NEVER use gradients for text. Keep contrast high (WCAG AA)."
+    ]
+  },
+  "layout": {
+    "spacing_system": "Use generous padding for Kiosk mode (p-8, p-12). Use dense padding for Admin mode (p-4).",
+    "grid_system": {
+      "kiosk": "Single column centered layout. Max-width 600px for forms.",
+      "admin": "Sidebar navigation (fixed left) + Fluid content area. Dashboard grid: 12 columns."
+    },
+    "kiosk_mode_specifics": {
+      "touch_targets": "All interactive elements must be min-height 60px.",
+      "placement": "Primary actions at the bottom of the screen (thumb zone).",
+      "wizard_pattern": "One question per screen. 'Back' button always visible top-left."
+    }
+  },
+  "components": {
+    "overrides": [
+      {
+        "component": "Button",
+        "styles": "rounded-xl shadow-sm active:scale-95 transition-transform duration-100",
+        "variants": {
+          "kiosk_primary": "h-16 text-xl bg-secondary hover:bg-secondary/90 text-white shadow-md",
+          "kiosk_secondary": "h-16 text-xl bg-white border-2 border-border hover:bg-accent text-foreground",
+          "admin_primary": "h-10 text-sm bg-primary text-primary-foreground"
+        }
+      },
+      {
+        "component": "Card",
+        "styles": "bg-white border-border/60 shadow-sm rounded-2xl"
+      },
+      {
+        "component": "Input",
+        "styles": "h-14 text-lg px-4 rounded-lg border-2 focus-visible:ring-offset-0 focus-visible:ring-2 focus-visible:ring-primary focus-visible:border-primary"
+      }
+    ],
+    "custom_components": [
+      {
+        "name": "KioskKeypad",
+        "description": "On-screen numeric keypad for apartment number entry if no physical keyboard.",
+        "path": "/app/frontend/src/components/kiosk/KioskKeypad.jsx"
+      },
+      {
+        "name": "ReceiptTicket",
+        "description": "Thermal printer compatible component. Hidden on screen, visible on print.",
+        "path": "/app/frontend/src/components/shared/ReceiptTicket.jsx",
+        "css_rules": "@media print { @page { size: 80mm auto; margin: 0; } body { visibility: hidden; } .receipt-only { visibility: visible; position: absolute; left: 0; top: 0; width: 100%; } }"
+      },
+      {
+        "name": "TuyaBreakerPanel",
+        "description": "Mock interface for switching breakers. Toggle switches with status indicators.",
+        "path": "/app/frontend/src/components/admin/TuyaBreakerPanel.jsx"
+      }
+    ]
+  },
+  "assets": {
+    "images": [
+      {
+        "category": "hero_background",
+        "url": "https://images.unsplash.com/photo-1762139645949-b0c896b593a4?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "description": "Modern apartment building exterior (Use with overlay for Kiosk Welcome Screen)"
+      },
+      {
+        "category": "success_illustration",
+        "url": "https://images.unsplash.com/photo-1743487014165-c26c868b8186?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "description": "Hand holding keys - Symbolizing successful payment/tenant status"
+      }
+    ],
+    "icons": "Use 'lucide-react' for all icons. Kiosk icons should be large (w-12 h-12)."
+  },
+  "motion": {
+    "transitions": "All buttons: transition-transform duration-100 ease-in-out (for touch feedback).",
+    "page_transition": "Kiosk steps should slide in from right to left.",
+    "library": "framer-motion"
+  },
+  "language": {
+    "default": "nl",
+    "strings": {
+      "welcome": "Welkom",
+      "select_apartment": "Kies uw appartement",
+      "pay_rent": "Huur betalen",
+      "scan_receipt": "Pak uw bon",
+      "loading": "Even geduld..."
+    }
+  },
+  "universal_guidelines": {
+    "frontend_framework": "React (Vite)",
+    "styling": "Tailwind CSS",
+    "ui_library": "shadcn/ui",
+    "state_management": "React Query / Context",
+    "testing": "All interactive elements must have 'data-testid' attributes."
+  },
+  "instructions_to_main_agent": [
+    "1. SETUP: Ensure Tailwind config includes the custom colors (Dutch Orange, Deep Blue).",
+    "2. KIOSK: Create a separate layout 'KioskLayout' that removes all admin sidebars/headers and focuses on full-screen immersion.",
+    "3. RECEIPT: Implement the 'ReceiptTicket' component with the specific print CSS. When 'Print' is clicked, trigger window.print().",
+    "4. LANGUAGE: All user-facing text must be in DUTCH (Nederlands).",
+    "5. MOCK: The Tuya Breaker Control is a UI-only mock. Use state to toggle switches but no backend logic needed yet."
+  ]
+}
