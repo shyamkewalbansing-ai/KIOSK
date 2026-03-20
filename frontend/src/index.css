@@ -375,6 +375,11 @@ code {
     size: A4;
     margin: 0;
   }
+  body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
   body * {
     visibility: hidden !important;
   }
@@ -386,9 +391,20 @@ code {
     top: 0;
     width: 210mm;
     min-height: 297mm;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
   }
   .receipt-only * {
     visibility: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+  .receipt-only [style*="clipPath"],
+  .receipt-only [style*="clip-path"] {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }
 
