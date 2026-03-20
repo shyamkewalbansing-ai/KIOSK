@@ -1,14 +1,12 @@
 import "@/App.css";
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { Toaster } from "./components/ui/sonner";
 
-// Kiosk
 import KioskLayout from "./components/kiosk/KioskLayout";
-
-// Admin
+import CompanySelect from "./components/kiosk/CompanySelect";
 import LoginPage from "./components/admin/LoginPage";
-import AuthCallback from "./components/admin/AuthCallback";
+import CompanyRegister from "./components/admin/CompanyRegister";
 import AdminLayout from "./components/admin/AdminLayout";
 import Dashboard from "./components/admin/Dashboard";
 import TenantManagement from "./components/admin/TenantManagement";
@@ -35,50 +33,31 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
-function AppRouter() {
-  const location = useLocation();
-
-  // CRITICAL: Check URL fragment for session_id BEFORE rendering routes
-  // This prevents race conditions with ProtectedRoute
-  if (location.hash?.includes('session_id=')) {
-    return <AuthCallback />;
-  }
-
-  return (
-    <Routes>
-      {/* Kiosk (public) */}
-      <Route path="/" element={<KioskLayout />} />
-
-      {/* Admin auth */}
-      <Route path="/admin/login" element={<LoginPage />} />
-
-      {/* Admin protected */}
-      <Route
-        path="/admin"
-        element={
-          <ProtectedRoute>
-            <AdminLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<Dashboard />} />
-        <Route path="tenants" element={<TenantManagement />} />
-        <Route path="apartments" element={<ApartmentManagement />} />
-        <Route path="payments" element={<PaymentHistory />} />
-        <Route path="breakers" element={<TuyaBreakerPanel />} />
-      </Route>
-
-      {/* Fallback */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-  );
-}
-
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRouter />
+        <Routes>
+          <Route path="/" element={<CompanySelect />} />
+          <Route path="/kiosk/:companyId" element={<KioskLayout />} />
+          <Route path="/register" element={<CompanyRegister />} />
+          <Route path="/admin/login" element={<LoginPage />} />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <AdminLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Dashboard />} />
+            <Route path="tenants" element={<TenantManagement />} />
+            <Route path="apartments" element={<ApartmentManagement />} />
+            <Route path="payments" element={<PaymentHistory />} />
+            <Route path="breakers" element={<TuyaBreakerPanel />} />
+          </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
         <Toaster position="top-center" richColors />
       </AuthProvider>
     </BrowserRouter>

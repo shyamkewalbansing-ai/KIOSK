@@ -4,7 +4,7 @@ import axios from 'axios';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-export default function ApartmentSelect({ onBack, onSelect }) {
+export default function ApartmentSelect({ onBack, onSelect, companyId }) {
   const [mode, setMode] = useState('grid');
   const [apartments, setApartments] = useState([]);
   const [tenants, setTenants] = useState([]);
@@ -16,8 +16,8 @@ export default function ApartmentSelect({ onBack, onSelect }) {
     const fetchData = async () => {
       try {
         const [aptRes, tenRes] = await Promise.all([
-          axios.get(`${API}/apartments`),
-          axios.get(`${API}/tenants`)
+          axios.get(`${API}/kiosk/${companyId}/apartments`),
+          axios.get(`${API}/kiosk/${companyId}/tenants`)
         ]);
         setApartments(aptRes.data);
         setTenants(tenRes.data);
@@ -44,7 +44,7 @@ export default function ApartmentSelect({ onBack, onSelect }) {
     if (!searchCode.trim()) return;
     setError('');
     try {
-      const res = await axios.get(`${API}/tenants/lookup/${searchCode.trim()}`);
+      const res = await axios.get(`${API}/kiosk/${companyId}/tenants/lookup/${searchCode.trim()}`);
       onSelect(res.data);
     } catch {
       setError('Huurder niet gevonden. Controleer uw code.');

@@ -42,20 +42,16 @@ export default function AdminLayout() {
         <div className="flex items-center gap-4">
           {user && (
             <div className="flex items-center gap-3 mr-2">
-              {user.picture ? (
-                <img src={user.picture} alt="" className="w-10 h-10 rounded-xl border-2 border-[#e2e8f0]" />
-              ) : (
-                <div className="w-10 h-10 bg-[#1e3a8a] rounded-xl flex items-center justify-center text-white font-bold">
-                  {user.name?.charAt(0)}
-                </div>
-              )}
+              <div className="w-10 h-10 bg-[#1e3a8a] rounded-xl flex items-center justify-center text-white font-bold">
+                {user.name?.charAt(0)}
+              </div>
               <div className="hidden xl:block">
                 <p className="text-sm font-bold text-[#0f172a]">{user.name}</p>
                 <p className="text-xs text-[#94a3b8]">{user.email}</p>
               </div>
             </div>
           )}
-          <a href="/" className="kiosk-btn-icon" data-testid="go-to-kiosk-link" title="Naar kiosk">
+          <a href={user?.company_id ? `/kiosk/${user.company_id}` : '/'} className="kiosk-btn-icon" data-testid="go-to-kiosk-link" title="Naar kiosk">
             <Home className="w-5 h-5" />
           </a>
           <button onClick={handleLogout} className="kiosk-btn-icon" data-testid="logout-btn" title="Uitloggen">

@@ -5,43 +5,45 @@ const AuthContext = createContext(null);
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [company, setCompany] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const checkAuth = useCallback(async () => {
     try {
-      const res = await axios.get(`${API}/auth/me`, { withCredentials: true });
-      setUser(res.data);
+      const res = await axios.get(`${API}/companies/me`, { withCredentials: true });
+      setCompany(res.data);
     } catch {
-      setUser(null);
+      setCompany(null);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    // CRITICAL: If returning from OAuth callback, skip the /me check.
-    // AuthCallback will exchange the session_id and establish the session first.
-    if (window.location.hash?.includes('session_id=')) {
-      setLoading(false);
-      return;
-    }
     checkAuth();
   }, [checkAuth]);
 
-  const login = (userData) => {
-    setUser(userData);
+  const login = async (email, password) => {
+    const res = await axios.post(`${API}/companies/login`, { email, password }, { withCredentials: true });
+    setCompany(res.data);
+    return res.data;
+  };
+
+  const register = async (data) => {
+    const res = await axios.post(`${API}/companies/register`, data, { withCredentials: true });
+    setCompany(res.data);
+    return res.data;
   };
 
   const logout = async () => {
     try {
-      await axios.post(`${API}/auth/logout`, {}, { withCredentials: true });
+      await axios.post(`${API}/companies/logout`, {}, { withCredentials: true });
     } catch { /* ignore */ }
-    setUser(null);
+    setCompany(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, checkAuth }}>
+    <AuthContext.Provider value={{ company, user: company, loading, login, register, logout, checkAuth }}>
       {children}
     </AuthContext.Provider>
   );

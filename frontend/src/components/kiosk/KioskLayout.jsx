@@ -1,11 +1,15 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
+import axios from 'axios';
 import WelcomeScreen from './WelcomeScreen';
 import ApartmentSelect from './ApartmentSelect';
 import TenantOverview from './TenantOverview';
 import PaymentSelect from './PaymentSelect';
 import PaymentConfirm from './PaymentConfirm';
 import ReceiptScreen from './ReceiptScreen';
+
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const slideVariants = {
   enter: { opacity: 0, scale: 0.98 },
@@ -14,10 +18,20 @@ const slideVariants = {
 };
 
 export default function KioskLayout() {
+  const { companyId } = useParams();
   const [step, setStep] = useState('welcome');
   const [tenant, setTenant] = useState(null);
   const [paymentData, setPaymentData] = useState(null);
   const [paymentResult, setPaymentResult] = useState(null);
+  const [companyName, setCompanyName] = useState('');
+
+  useEffect(() => {
+    if (companyId) {
+      axios.get(`${API}/kiosk/${companyId}/company`).then(res => {
+        setCompanyName(res.data.name);
+      }).catch(() => {});
+    }
+  }, [companyId]);
 
   const goTo = useCallback((newStep) => setStep(newStep), []);
 
@@ -31,12 +45,13 @@ export default function KioskLayout() {
   const renderStep = () => {
     switch (step) {
       case 'welcome':
-        return <WelcomeScreen onStart={() => goTo('select')} />;
+        return <WelcomeScreen onStart={() => goTo('select')} companyName={companyName} companyId={companyId} />;
       case 'select':
         return (
           <ApartmentSelect
             onBack={() => goTo('welcome')}
             onSelect={(t) => { setTenant(t); goTo('overview'); }}
+            companyId={companyId}
           />
         );
       case 'overview':
@@ -62,6 +77,7 @@ export default function KioskLayout() {
             paymentData={paymentData}
             onBack={() => goTo('payment')}
             onSuccess={(result) => { setPaymentResult(result); goTo('receipt'); }}
+            companyId={companyId}
           />
         );
       case 'receipt':
@@ -73,7 +89,7 @@ export default function KioskLayout() {
           />
         );
       default:
-        return <WelcomeScreen onStart={() => goTo('select')} />;
+        return <WelcomeScreen onStart={() => goTo('select')} companyName={companyName} companyId={companyId} />;
     }
   };
 

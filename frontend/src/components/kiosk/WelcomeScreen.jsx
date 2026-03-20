@@ -1,16 +1,15 @@
 import { Building2, ArrowRight, Banknote, Droplets, Receipt, Settings } from 'lucide-react';
 
-export default function WelcomeScreen({ onStart }) {
+export default function WelcomeScreen({ onStart, companyName, companyId }) {
   return (
     <div className="kiosk-root bg-white" data-testid="welcome-screen">
-      {/* Top bar */}
       <div className="kiosk-topbar">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-[#f97316] rounded-2xl flex items-center justify-center">
             <Building2 className="w-7 h-7 text-white" />
           </div>
           <span className="text-2xl font-extrabold tracking-tight text-[#1e3a8a]" style={{ fontFamily: 'Manrope, sans-serif' }}>
-            Appartement Kiosk
+            {companyName || 'Appartement Kiosk'}
           </span>
         </div>
         <div className="flex items-center gap-4">
@@ -28,9 +27,7 @@ export default function WelcomeScreen({ onStart }) {
         </div>
       </div>
 
-      {/* Main content - split layout */}
       <div className="flex-1 flex">
-        {/* Left panel - Main CTA */}
         <div className="flex-1 flex flex-col justify-center px-16 xl:px-24">
           <h1
             className="text-5xl xl:text-7xl font-extrabold text-[#0f172a] leading-tight tracking-tight"
@@ -52,7 +49,6 @@ export default function WelcomeScreen({ onStart }) {
           </button>
         </div>
 
-        {/* Right panel - Visual */}
         <div className="hidden lg:flex flex-1 bg-[#1e3a8a] rounded-tl-[60px] items-center justify-center relative overflow-hidden">
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-20 right-20 w-80 h-80 bg-white rounded-full" />
@@ -61,7 +57,7 @@ export default function WelcomeScreen({ onStart }) {
           <div className="relative z-10 text-center text-white px-12">
             <Building2 className="w-24 h-24 mx-auto mb-8 opacity-90" />
             <h2 className="text-3xl xl:text-4xl font-bold mb-6" style={{ fontFamily: 'Manrope, sans-serif' }}>
-              Huurbetalingen
+              {companyName || 'Huurbetalingen'}
             </h2>
             <p className="text-lg opacity-80 max-w-sm mx-auto">
               Snel, eenvoudig en veilig uw huur betalen
@@ -70,7 +66,6 @@ export default function WelcomeScreen({ onStart }) {
         </div>
       </div>
 
-      {/* Bottom options */}
       <div className="border-t border-[#e2e8f0] bg-[#f8fafc] px-16 py-6 flex-shrink-0">
         <p className="text-sm text-[#94a3b8] uppercase tracking-widest font-bold mb-4">Beschikbare diensten</p>
         <div className="flex gap-4">

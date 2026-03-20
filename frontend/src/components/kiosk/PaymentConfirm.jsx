@@ -15,7 +15,7 @@ const TYPE_LABELS = {
   fines: 'Boetes',
 };
 
-export default function PaymentConfirm({ tenant, paymentData, onBack, onSuccess }) {
+export default function PaymentConfirm({ tenant, paymentData, onBack, onSuccess, companyId }) {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
 
@@ -25,7 +25,7 @@ export default function PaymentConfirm({ tenant, paymentData, onBack, onSuccess 
     setProcessing(true);
     setError('');
     try {
-      const res = await axios.post(`${API}/payments`, {
+      const res = await axios.post(`${API}/kiosk/${companyId}/payments`, {
         tenant_id: tenant.tenant_id,
         amount: paymentData.amount,
         payment_type: paymentData.payment_type,
