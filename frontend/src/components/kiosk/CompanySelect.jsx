@@ -1,38 +1,13 @@
-import { useState, useEffect } from 'react';
-import { Building2, ArrowRight, Settings } from 'lucide-react';
+import { Building2, LogIn, UserPlus, ArrowRight, Shield, BarChart3, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-
-export default function CompanySelect() {
-  const [companies, setCompanies] = useState([]);
-  const [loading, setLoading] = useState(true);
+export default function LandingPage() {
   const navigate = useNavigate();
 
-  useEffect(() => {
-    axios.get(`${API}/companies/public`).then(res => {
-      setCompanies(res.data);
-    }).catch(() => {}).finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    if (!loading && companies.length === 1) {
-      navigate(`/kiosk/${companies[0].company_id}`, { replace: true });
-    }
-  }, [loading, companies, navigate]);
-
-  if (loading) {
-    return (
-      <div className="fixed inset-0 bg-white flex items-center justify-center">
-        <div className="kiosk-spinner" />
-      </div>
-    );
-  }
-
   return (
-    <div className="fixed inset-0 bg-white flex flex-col" data-testid="company-select">
-      <div className="kiosk-topbar">
+    <div className="fixed inset-0 bg-white flex flex-col overflow-auto" data-testid="landing-page">
+      {/* Top bar */}
+      <div className="kiosk-topbar flex-shrink-0">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-[#f97316] rounded-2xl flex items-center justify-center">
             <Building2 className="w-7 h-7 text-white" />
@@ -41,59 +16,107 @@ export default function CompanySelect() {
             Appartement Kiosk
           </span>
         </div>
-        <div className="flex items-center gap-4">
-          <span className="text-base text-[#94a3b8]">
-            {new Date().toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-          </span>
-          <a
-            href="/admin/login"
-            data-testid="admin-login-link"
-            className="kiosk-btn-icon w-11 h-11 opacity-40 hover:opacity-100 transition-opacity"
-            title="Beheerder"
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate('/admin/login')}
+            data-testid="landing-login-btn"
+            className="kiosk-tab kiosk-tab-active"
           >
-            <Settings className="w-5 h-5" />
-          </a>
+            <LogIn className="w-5 h-5 mr-2" />
+            Inloggen
+          </button>
+          <button
+            onClick={() => navigate('/register')}
+            data-testid="landing-register-btn"
+            className="kiosk-btn-primary h-12 text-base px-6"
+          >
+            <UserPlus className="w-5 h-5 mr-2" />
+            Registreren
+          </button>
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center px-8">
-        <h1 className="text-4xl xl:text-5xl font-extrabold text-[#0f172a] mb-3 text-center" style={{ fontFamily: 'Manrope, sans-serif' }}>
-          Kies uw gebouw
-        </h1>
-        <p className="text-lg text-[#94a3b8] mb-10 text-center">
-          Selecteer het vastgoedbedrijf waarvoor u wilt betalen
-        </p>
+      {/* Hero */}
+      <div className="flex-1 flex">
+        <div className="flex-1 flex flex-col justify-center px-16 xl:px-24">
+          <div className="inline-flex items-center gap-2 bg-[#eff6ff] text-[#1e3a8a] text-sm font-bold px-4 py-2 rounded-full w-fit mb-6">
+            <Shield className="w-4 h-4" />
+            SaaS Platform voor Vastgoedbeheer
+          </div>
+          <h1
+            className="text-5xl xl:text-7xl font-extrabold text-[#0f172a] leading-tight tracking-tight"
+            style={{ fontFamily: 'Manrope, sans-serif' }}
+          >
+            Huur Betalings<br />
+            <span className="text-[#f97316]">Kiosk</span>
+          </h1>
+          <p className="text-xl xl:text-2xl text-[#64748b] mt-6 max-w-lg leading-relaxed">
+            Zelfbedieningskiosk voor uw huurders. Beheer meerdere panden, huurders en betalingen vanuit één platform.
+          </p>
 
-        {companies.length === 0 ? (
-          <div className="bg-[#f8fafc] rounded-2xl border-2 border-[#e2e8f0] p-12 text-center max-w-md">
-            <Building2 className="w-16 h-16 text-[#94a3b8] mx-auto mb-4" />
-            <p className="text-[#94a3b8] text-lg mb-4">Geen bedrijven beschikbaar</p>
-            <a href="/register" className="text-[#1e3a8a] font-bold hover:underline" data-testid="register-company-link">
-              Registreer uw bedrijf
-            </a>
+          <div className="flex gap-4 mt-10">
+            <button
+              onClick={() => navigate('/register')}
+              data-testid="hero-register-btn"
+              className="kiosk-btn-primary"
+            >
+              <span>Gratis starten</span>
+              <ArrowRight className="w-6 h-6 ml-3" />
+            </button>
+            <button
+              onClick={() => navigate('/admin/login')}
+              data-testid="hero-login-btn"
+              className="kiosk-btn-secondary h-16 px-8 text-lg"
+            >
+              Inloggen
+            </button>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-4xl">
-            {companies.map((c) => (
-              <button
-                key={c.company_id}
-                data-testid={`company-btn-${c.company_id}`}
-                onClick={() => navigate(`/kiosk/${c.company_id}`)}
-                className="bg-white rounded-3xl border-2 border-[#e2e8f0] p-8 text-left hover:border-[#1e3a8a] hover:shadow-lg transition-all group"
-              >
-                <div className="w-16 h-16 bg-[#1e3a8a] rounded-2xl flex items-center justify-center mb-4 group-hover:bg-[#f97316] transition-colors">
-                  <Building2 className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="text-xl font-extrabold text-[#0f172a] mb-1">{c.name}</h3>
-                {c.address && <p className="text-sm text-[#94a3b8]">{c.address}</p>}
-                <div className="flex items-center gap-2 mt-4 text-[#1e3a8a] font-bold text-sm group-hover:text-[#f97316] transition-colors">
-                  <span>Selecteren</span>
-                  <ArrowRight className="w-4 h-4" />
-                </div>
-              </button>
-            ))}
+        </div>
+
+        {/* Right panel */}
+        <div className="hidden lg:flex flex-1 bg-[#1e3a8a] rounded-tl-[60px] items-center justify-center relative overflow-hidden">
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-20 right-20 w-80 h-80 bg-white rounded-full" />
+            <div className="absolute bottom-10 left-10 w-60 h-60 bg-[#f97316] rounded-full" />
           </div>
-        )}
+          <div className="relative z-10 text-center text-white px-12">
+            <Building2 className="w-24 h-24 mx-auto mb-8 opacity-90" />
+            <h2 className="text-3xl xl:text-4xl font-bold mb-6" style={{ fontFamily: 'Manrope, sans-serif' }}>
+              Uw eigen kiosk
+            </h2>
+            <p className="text-lg opacity-80 max-w-sm mx-auto mb-8">
+              Elk bedrijf krijgt een unieke kiosk-URL voor hun huurders
+            </p>
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl px-6 py-4 text-left max-w-xs mx-auto">
+              <p className="text-xs opacity-60 mb-1">Uw kiosk URL</p>
+              <p className="font-mono text-sm opacity-90">/kiosk/uw-bedrijf-id</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Features */}
+      <div className="border-t border-[#e2e8f0] bg-[#f8fafc] px-16 py-8 flex-shrink-0">
+        <div className="flex gap-6">
+          {[
+            { icon: Building2, label: 'Multi-Pand Beheer', desc: 'Beheer al uw gebouwen vanuit één dashboard' },
+            { icon: Users, label: 'Huurder Kiosk', desc: 'Zelfbediening voor huur en servicekosten' },
+            { icon: BarChart3, label: 'Realtime Overzicht', desc: 'Direct inzicht in betalingen en achterstand' },
+          ].map((item) => (
+            <div
+              key={item.label}
+              className="flex items-center gap-4 bg-white rounded-2xl border border-[#e2e8f0] px-6 py-5 flex-1"
+            >
+              <div className="w-12 h-12 bg-[#eff6ff] rounded-xl flex items-center justify-center flex-shrink-0">
+                <item.icon className="w-6 h-6 text-[#1e3a8a]" />
+              </div>
+              <div>
+                <p className="font-bold text-[#0f172a] text-sm">{item.label}</p>
+                <p className="text-xs text-[#94a3b8]">{item.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

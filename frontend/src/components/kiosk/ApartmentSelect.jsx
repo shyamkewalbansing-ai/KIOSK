@@ -28,7 +28,7 @@ export default function ApartmentSelect({ onBack, onSelect, companyId }) {
       }
     };
     fetchData();
-  }, []);
+  }, [companyId]);
 
   const handleApartmentClick = (apt) => {
     const tenant = tenants.find(t => t.apartment_id === apt.apartment_id && t.status === 'active');
