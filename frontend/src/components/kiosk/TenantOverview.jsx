@@ -10,6 +10,7 @@ export default function TenantOverview({ tenant, onBack, onPay }) {
   const total = (tenant.outstanding_rent || 0) + (tenant.service_costs || 0) + (tenant.fines || 0);
   const hasDebt = total > 0;
   const hasArrears = tenant.outstanding_rent > tenant.monthly_rent;
+  const currentMonth = new Date().toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' });
 
   return (
     <div className="kiosk-root bg-[#f8fafc]" data-testid="tenant-overview">
@@ -116,7 +117,7 @@ export default function TenantOverview({ tenant, onBack, onPay }) {
                 <p className="font-bold text-[#64748b]">Maandhuur</p>
               </div>
               <p className="text-3xl font-extrabold text-[#0f172a]" data-testid="monthly-rent">{formatSRD(tenant.monthly_rent)}</p>
-              <p className="text-sm text-[#94a3b8] mt-2">per maand</p>
+              <p className="text-sm text-[#94a3b8] mt-2" data-testid="current-rent-month">{currentMonth}</p>
             </div>
 
             {/* Outstanding rent */}

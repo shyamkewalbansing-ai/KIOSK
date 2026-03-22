@@ -31,6 +31,7 @@ export default function PaymentConfirm({ tenant, paymentData, onBack, onSuccess,
         payment_type: paymentData.payment_type,
         payment_method: paymentData.payment_method,
         description: paymentData.description,
+        rent_month: paymentData.rent_month || null,
       });
       setTimeout(() => onSuccess(res.data), 600);
     } catch {

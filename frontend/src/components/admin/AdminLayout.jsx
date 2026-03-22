@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
-  LayoutDashboard, Users, Building2, CreditCard, Zap, LogOut, Home, Shield
+  LayoutDashboard, Users, Building2, CreditCard, Zap, LogOut, Home, Shield, Settings
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { id: 'tenants', path: '/admin/tenants', label: 'Huurders', icon: Users },
   { id: 'apartments', path: '/admin/apartments', label: 'Appartementen', icon: Building2 },
   { id: 'payments', path: '/admin/payments', label: 'Kwitanties', icon: CreditCard },
+  { id: 'settings', path: '/admin/settings', label: 'Instellingen', icon: Settings },
   { id: 'breakers', path: '/admin/breakers', label: 'Stroombrekers', icon: Zap },
   { id: 'subscription', path: '/admin/subscription', label: 'Abonnement', icon: Shield },
 ];

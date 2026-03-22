@@ -15,7 +15,7 @@ export default function ApartmentManagement() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editApt, setEditApt] = useState(null);
-  const [form, setForm] = useState({ number: '', floor: 0, monthly_rent: 0, service_costs: 0, description: '' });
+  const [form, setForm] = useState({ number: '', monthly_rent: 0, service_costs: 0, description: '' });
 
   const fetchData = useCallback(async () => {
     try {
@@ -29,19 +29,19 @@ export default function ApartmentManagement() {
 
   const openCreate = () => {
     setEditApt(null);
-    setForm({ number: '', floor: 0, monthly_rent: 0, service_costs: 0, description: '' });
+    setForm({ number: '', monthly_rent: 0, service_costs: 0, description: '' });
     setDialogOpen(true);
   };
 
   const openEdit = (apt) => {
     setEditApt(apt);
-    setForm({ number: apt.number, floor: apt.floor || 0, monthly_rent: apt.monthly_rent, service_costs: apt.service_costs, description: apt.description || '' });
+    setForm({ number: apt.number, monthly_rent: apt.monthly_rent, service_costs: apt.service_costs, description: apt.description || '' });
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
     try {
-      const payload = { number: form.number, floor: parseInt(form.floor) || 0, monthly_rent: parseFloat(form.monthly_rent) || 0, service_costs: parseFloat(form.service_costs) || 0, description: form.description };
+      const payload = { number: form.number, monthly_rent: parseFloat(form.monthly_rent) || 0, service_costs: parseFloat(form.service_costs) || 0, description: form.description };
       if (editApt) {
         await axios.put(`${API}/apartments/${editApt.apartment_id}`, payload, { withCredentials: true });
         toast.success('Appartement bijgewerkt');
@@ -86,7 +86,6 @@ export default function ApartmentManagement() {
             <div className="flex items-start justify-between mb-3">
               <div>
                 <h3 className="text-3xl font-extrabold text-[#1e3a8a]">{apt.number}</h3>
-                <p className="text-sm text-[#94a3b8]">Verdieping {apt.floor}</p>
               </div>
               <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${
                 apt.status === 'occupied' ? 'bg-[#dcfce7] text-[#166534]' : 'bg-[#f1f5f9] text-[#94a3b8]'
@@ -128,17 +127,10 @@ export default function ApartmentManagement() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm font-bold text-[#64748b] mb-1 block">Nummer</label>
-                <input data-testid="apt-number-input" value={form.number} onChange={(e) => setForm({...form, number: e.target.value})}
-                  className="kiosk-input" placeholder="bijv. A101" />
-              </div>
-              <div>
-                <label className="text-sm font-bold text-[#64748b] mb-1 block">Verdieping</label>
-                <input data-testid="apt-floor-input" type="number" value={form.floor} onChange={(e) => setForm({...form, floor: e.target.value})}
-                  className="kiosk-input" />
-              </div>
+            <div>
+              <label className="text-sm font-bold text-[#64748b] mb-1 block">Nummer</label>
+              <input data-testid="apt-number-input" value={form.number} onChange={(e) => setForm({...form, number: e.target.value})}
+                className="kiosk-input" placeholder="bijv. A101" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>

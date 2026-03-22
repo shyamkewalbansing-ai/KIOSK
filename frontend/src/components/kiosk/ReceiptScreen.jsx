@@ -1,10 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { CheckCircle, Printer } from 'lucide-react';
 import ReceiptTicket from '../shared/ReceiptTicket';
+import axios from 'axios';
 
-export default function ReceiptScreen({ payment, tenant, onDone }) {
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+export default function ReceiptScreen({ payment, tenant, companyId, onDone }) {
   const [countdown, setCountdown] = useState(8);
+  const [signatureUrl, setSignatureUrl] = useState(null);
   const timerRef = useRef(null);
+
+  useEffect(() => {
+    if (companyId) {
+      setSignatureUrl(`${API}/kiosk/${companyId}/company/signature`);
+    }
+  }, [companyId]);
 
   useEffect(() => {
     if (!payment) return;
@@ -104,14 +114,14 @@ export default function ReceiptScreen({ payment, tenant, onDone }) {
         <div className="hidden lg:flex w-[440px] bg-[#f8fafc] border-l border-[#e2e8f0] flex-col items-center justify-center p-6 overflow-auto">
           <p className="text-xs uppercase tracking-widest text-[#94a3b8] font-bold mb-4 flex-shrink-0">Kwitantie voorbeeld</p>
           <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-sm overflow-hidden w-full max-w-[380px] flex-shrink-0">
-            <ReceiptTicket payment={payment} tenant={tenant} preview />
+            <ReceiptTicket payment={payment} tenant={tenant} preview signatureUrl={signatureUrl} />
           </div>
         </div>
       </div>
 
       {/* Hidden A4 kwitantie for printing */}
       <div className="receipt-only">
-        <ReceiptTicket payment={payment} tenant={tenant} />
+        <ReceiptTicket payment={payment} tenant={tenant} signatureUrl={signatureUrl} />
       </div>
     </div>
   );

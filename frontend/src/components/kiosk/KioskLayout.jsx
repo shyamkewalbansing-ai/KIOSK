@@ -85,6 +85,7 @@ export default function KioskLayout() {
           <ReceiptScreen
             payment={paymentResult}
             tenant={tenant}
+            companyId={companyId}
             onDone={reset}
           />
         );

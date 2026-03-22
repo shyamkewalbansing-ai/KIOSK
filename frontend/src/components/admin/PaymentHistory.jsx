@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CreditCard, Search, FileText, X, Printer } from 'lucide-react';
+import { CreditCard, Search, FileText, X, Printer, Calendar } from 'lucide-react';
 import { Dialog, DialogContent } from '../../components/ui/dialog';
 import ReceiptTicket from '../shared/ReceiptTicket';
 import axios from 'axios';
@@ -23,16 +23,32 @@ export default function PaymentHistory() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedPayment, setSelectedPayment] = useState(null);
+  const [filterMonth, setFilterMonth] = useState('');
+  const [signatureUrl, setSignatureUrl] = useState(null);
 
   useEffect(() => {
     const fetchPayments = async () => {
       try {
-        const res = await axios.get(`${API}/payments`, { withCredentials: true });
+        const params = {};
+        if (filterMonth) params.month = filterMonth;
+        const res = await axios.get(`${API}/payments`, { withCredentials: true, params });
         setPayments(res.data);
       } catch (err) { console.error(err); }
       finally { setLoading(false); }
     };
     fetchPayments();
+  }, [filterMonth]);
+
+  useEffect(() => {
+    const checkSignature = async () => {
+      try {
+        const res = await axios.get(`${API}/company/settings`, { withCredentials: true });
+        if (res.data.signature_uploaded) {
+          setSignatureUrl(`${API}/company/signature/image`);
+        }
+      } catch {}
+    };
+    checkSignature();
   }, []);
 
   const filtered = payments.filter(p =>
@@ -45,6 +61,27 @@ export default function PaymentHistory() {
 
   const handlePrintKwitantie = () => {
     window.print();
+  };
+
+  const getMonthOptions = () => {
+    const months = [];
+    const now = new Date();
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = d.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' });
+      months.push({ value: val, label });
+    }
+    return months;
+  };
+
+  const formatRentMonth = (rm) => {
+    if (!rm) return '';
+    try {
+      const [y, m] = rm.split('-');
+      const d = new Date(parseInt(y), parseInt(m) - 1, 1);
+      return d.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' });
+    } catch { return rm; }
   };
 
   if (loading) {
@@ -64,6 +101,20 @@ export default function PaymentHistory() {
             placeholder="Zoek op naam, appartement, kwitantienummer..."
             className="kiosk-input pl-12"
           />
+        </div>
+        <div className="relative min-w-[200px]">
+          <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#94a3b8]" />
+          <select
+            data-testid="month-filter-select"
+            value={filterMonth}
+            onChange={(e) => { setLoading(true); setFilterMonth(e.target.value); }}
+            className="kiosk-input pl-12 appearance-none cursor-pointer"
+          >
+            <option value="">Alle maanden</option>
+            {getMonthOptions().map(m => (
+              <option key={m.value} value={m.value}>{m.label}</option>
+            ))}
+          </select>
         </div>
         <div className="bg-white rounded-2xl border-2 border-[#e2e8f0] px-6 py-3 text-right">
           <p className="text-xs text-[#94a3b8]">{filtered.length} betalingen</p>
@@ -94,6 +145,7 @@ export default function PaymentHistory() {
                     <p className="text-base font-bold text-[#0f172a]">{p.tenant_name}</p>
                     <p className="text-sm text-[#94a3b8]">
                       Appt. {p.apartment_number} &middot; {TYPE_LABELS[p.payment_type] || p.payment_type}
+                      {p.rent_month && <span className="ml-1">&middot; {formatRentMonth(p.rent_month)}</span>}
                     </p>
                   </div>
                 </div>
@@ -155,7 +207,7 @@ export default function PaymentHistory() {
           {/* Kwitantie content */}
           <div className="p-6">
             {selectedPayment && (
-              <ReceiptTicket payment={selectedPayment} preview />
+              <ReceiptTicket payment={selectedPayment} preview signatureUrl={signatureUrl} />
             )}
           </div>
         </DialogContent>
@@ -164,7 +216,7 @@ export default function PaymentHistory() {
       {/* Hidden kwitantie for printing from admin */}
       {selectedPayment && (
         <div className="receipt-only">
-          <ReceiptTicket payment={selectedPayment} />
+          <ReceiptTicket payment={selectedPayment} signatureUrl={signatureUrl} />
         </div>
       )}
     </div>

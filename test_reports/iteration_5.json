@@ -1,0 +1,95 @@
+{
+  "summary": "Comprehensive testing completed for new batch of 6 features. All 16 backend API tests passed (100%). Frontend UI testing verified all new features: Settings page with billing config and signature upload, Apartment form without floor field, Payment history with month filter, Kiosk tenant overview with current month display. All features working correctly with Dutch UI.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Apartment Dialog", "issues": ["Missing DialogDescription for accessibility (console warning)"]}
+    ]
+  },
+
+  "passed_tests": [
+    "1. Apartment CRUD - 'Verdieping' field removed: POST /api/apartments works without floor field",
+    "2. Company Settings - GET /api/company/settings returns billing_day_of_month and late_fee_amount",
+    "3. Company Settings - PUT /api/company/settings updates billing_day_of_month and late_fee_amount",
+    "4. Company Settings - Billing day validation (1-28) works correctly",
+    "5. Company Settings - Late fee validation (no negative) works correctly",
+    "6. Signature upload - POST /api/company/signature uploads image successfully",
+    "7. Signature retrieve - GET /api/company/signature/image returns image",
+    "8. Signature delete - DELETE /api/company/signature removes signature",
+    "9. Late fee application - POST /api/company/apply-late-fees applies fines to tenants",
+    "10. Payments with rent_month - POST /api/payments includes rent_month field (auto-generated YYYY-MM)",
+    "11. Payment month filter - GET /api/payments?month=YYYY-MM filters by month correctly",
+    "12. Kiosk payments - POST /api/kiosk/{company_id}/payments includes rent_month field",
+    "13. Kiosk signature - GET /api/kiosk/{company_id}/company/signature returns image",
+    "14. Kiosk signature 404 - Returns 404 when no signature uploaded",
+    "15. Kiosk tenant lookup - GET /api/kiosk/{company_id}/tenants/lookup/{query} works",
+    "16. Frontend: Admin Settings page loads at /admin/settings with billing config and signature upload",
+    "17. Frontend: Apartment form no longer has Verdieping (floor) field",
+    "18. Frontend: Payment history has month filter dropdown (Alle maanden, maart 2026, etc.)",
+    "19. Frontend: Payment rows show rent_month (e.g., 'maart 2026')",
+    "20. Frontend: Kwitantie dialog shows rent_month in receipt",
+    "21. Frontend: Kiosk TenantOverview shows current month name (maart 2026)",
+    "22. Frontend: Settings page save button works with toast confirmation"
+  ],
+
+  "test_report_links": [
+    "/app/backend/tests/test_new_features_batch.py",
+    "/app/test_reports/pytest/new_features_results.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [
+    "Minor: Dialog components missing DialogDescription for accessibility (console warnings)"
+  ],
+
+  "updated_files": [
+    "/app/backend/tests/test_new_features_batch.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (16/16 tests passed)",
+    "frontend": "100%"
+  },
+
+  "test_credentials": {
+    "company_admin": "email=demo@vastgoed.sr, password=demo123, company_id=comp_demo",
+    "super_admin": "email=admin@facturatie.sr, password=Bharat7755",
+    "demo_tenants": "HUR001 (ten_001), HUR002 (ten_002), HUR003 (ten_003), HUR004 (ten_004)"
+  },
+
+  "seed_data_creation": "Test apartment TEST_D101 created and cleaned up during testing",
+
+  "retest_needed": false,
+
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "New batch of 6 features fully tested and working: 1) Floor field removed from apartments, 2) Company settings with billing_day_of_month (1-28) and late_fee_amount, 3) Signature/stamp upload for companies (PNG/JPG/WEBP max 5MB), 4) Late fee application endpoint, 5) rent_month tracking in payments (auto-generated YYYY-MM), 6) Month filter on payment history. All UI in Dutch. Tuya Breaker Panel remains MOCKED (UI-only).",
+
+  "mocked_apis": {
+    "Tuya Breaker Panel": "UI-only mock - no real Tuya integration"
+  },
+
+  "features_verified": {
+    "apartment_floor_removed": true,
+    "company_settings_billing_day": true,
+    "company_settings_late_fee": true,
+    "signature_upload": true,
+    "signature_delete": true,
+    "late_fee_application": true,
+    "payment_rent_month": true,
+    "payment_month_filter": true,
+    "kiosk_signature_endpoint": true,
+    "frontend_settings_page": true,
+    "frontend_apartment_form_no_floor": true,
+    "frontend_payment_month_filter": true,
+    "frontend_kiosk_current_month": true
+  }
+}

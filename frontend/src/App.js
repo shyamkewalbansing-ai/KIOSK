@@ -14,6 +14,7 @@ import ApartmentManagement from "./components/admin/ApartmentManagement";
 import PaymentHistory from "./components/admin/PaymentHistory";
 import TuyaBreakerPanel from "./components/admin/TuyaBreakerPanel";
 import SubscriptionPage from "./components/admin/SubscriptionPage";
+import CompanySettings from "./components/admin/CompanySettings";
 import SuperAdminLogin from "./components/superadmin/SuperAdminLogin";
 import SuperAdminDashboard from "./components/superadmin/SuperAdminDashboard";
 
@@ -57,6 +58,7 @@ function App() {
             <Route path="tenants" element={<TenantManagement />} />
             <Route path="apartments" element={<ApartmentManagement />} />
             <Route path="payments" element={<PaymentHistory />} />
+            <Route path="settings" element={<CompanySettings />} />
             <Route path="breakers" element={<TuyaBreakerPanel />} />
             <Route path="subscription" element={<SubscriptionPage />} />
           </Route>

@@ -10,13 +10,22 @@ const TYPE_LABELS = {
   deposit: 'Borgsom',
 };
 
-export default function KwitantieTicket({ payment, tenant, preview = false }) {
+export default function KwitantieTicket({ payment, tenant, preview = false, signatureUrl = null }) {
   if (!payment) return null;
 
   const date = new Date(payment.created_at);
   const dateStr = date.toLocaleDateString('nl-NL', { day: '2-digit', month: 'long', year: 'numeric' });
   const timeStr = date.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
   const kwNr = payment.kwitantie_nummer || payment.receipt_number || '';
+
+  const formatRentMonth = (rm) => {
+    if (!rm) return '';
+    try {
+      const [y, m] = rm.split('-');
+      const d = new Date(parseInt(y), parseInt(m) - 1, 1);
+      return d.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' });
+    } catch { return rm; }
+  };
 
   const s = preview ? 0.52 : 1;
 
@@ -99,6 +108,9 @@ export default function KwitantieTicket({ payment, tenant, preview = false }) {
           </div>
           <div style={{ color: '#64748b', fontSize: `${10 * s}px` }}>
             Appt. {payment.apartment_number || tenant?.apartment_number} &middot; Code: {payment.tenant_code || tenant?.tenant_code}
+            {payment.rent_month && (
+              <span> &middot; Huurmaand: {formatRentMonth(payment.rent_month)}</span>
+            )}
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
@@ -218,30 +230,53 @@ export default function KwitantieTicket({ payment, tenant, preview = false }) {
             Betalingen worden direct verwerkt en zijn niet restitueerbaar.
           </div>
         </div>
-        {/* Stamp */}
+        {/* Stamp / Signature */}
         <div style={{ textAlign: 'center' }}>
-          <div style={{
-            display: 'inline-block',
-            border: `${3 * s}px solid #1e3a8a`,
-            borderRadius: `${12 * s}px`,
-            padding: `${12 * s}px ${24 * s}px`,
-            transform: 'rotate(-4deg)',
-            position: 'relative',
-          }}>
-            <div style={{ fontSize: `${14 * s}px`, fontWeight: 800, color: '#1e3a8a', letterSpacing: '0.05em' }}>
-              APPARTEMENT KIOSK
+          {signatureUrl ? (
+            <div style={{ position: 'relative' }}>
+              <img
+                src={signatureUrl}
+                alt="Bedrijfsstempel"
+                style={{
+                  maxHeight: `${80 * s}px`,
+                  maxWidth: `${160 * s}px`,
+                  objectFit: 'contain',
+                  transform: 'rotate(-2deg)',
+                }}
+                crossOrigin="use-credentials"
+              />
+              <div style={{
+                position: 'absolute', top: `${-6 * s}px`, right: `${-6 * s}px`,
+                width: `${20 * s}px`, height: `${20 * s}px`,
+                background: '#16a34a', borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'white', fontSize: `${12 * s}px`, fontWeight: 800,
+              }}>&#10003;</div>
             </div>
-            <div style={{ fontSize: `${9 * s}px`, color: '#1e3a8a', fontWeight: 700, marginTop: `${2 * s}px` }}>
-              BETAALD &middot; VOLDAAN
-            </div>
+          ) : (
             <div style={{
-              position: 'absolute', top: `${-8 * s}px`, right: `${-8 * s}px`,
-              width: `${24 * s}px`, height: `${24 * s}px`,
-              background: '#16a34a', borderRadius: '50%',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'white', fontSize: `${14 * s}px`, fontWeight: 800,
-            }}>&#10003;</div>
-          </div>
+              display: 'inline-block',
+              border: `${3 * s}px solid #1e3a8a`,
+              borderRadius: `${12 * s}px`,
+              padding: `${12 * s}px ${24 * s}px`,
+              transform: 'rotate(-4deg)',
+              position: 'relative',
+            }}>
+              <div style={{ fontSize: `${14 * s}px`, fontWeight: 800, color: '#1e3a8a', letterSpacing: '0.05em' }}>
+                APPARTEMENT KIOSK
+              </div>
+              <div style={{ fontSize: `${9 * s}px`, color: '#1e3a8a', fontWeight: 700, marginTop: `${2 * s}px` }}>
+                BETAALD &middot; VOLDAAN
+              </div>
+              <div style={{
+                position: 'absolute', top: `${-8 * s}px`, right: `${-8 * s}px`,
+                width: `${24 * s}px`, height: `${24 * s}px`,
+                background: '#16a34a', borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'white', fontSize: `${14 * s}px`, fontWeight: 800,
+              }}>&#10003;</div>
+            </div>
+          )}
         </div>
       </div>
 

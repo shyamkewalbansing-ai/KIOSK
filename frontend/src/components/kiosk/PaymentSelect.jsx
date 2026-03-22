@@ -49,7 +49,7 @@ export default function PaymentSelect({ tenant, onBack, onConfirm }) {
       amount = tenant.fines;
       description = 'Boetes betaling';
     }
-    onConfirm({ payment_type: selectedType, amount, description, payment_method: 'cash' });
+    onConfirm({ payment_type: selectedType, amount, description, payment_method: 'cash', rent_month: new Date().toISOString().slice(0, 7) });
   };
 
   const canProceed = selectedType && (selectedType !== 'partial_rent' || (customAmount && parseFloat(customAmount) > 0 && parseFloat(customAmount) <= tenant.outstanding_rent));

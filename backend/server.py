@@ -59,7 +59,6 @@ class RegisterPayment(BaseModel):
 
 class ApartmentCreate(BaseModel):
     number: str
-    floor: int = 0
     monthly_rent: float
     service_costs: float = 0
     description: str = ""
@@ -67,7 +66,6 @@ class ApartmentCreate(BaseModel):
 
 class ApartmentUpdate(BaseModel):
     number: Optional[str] = None
-    floor: Optional[int] = None
     monthly_rent: Optional[float] = None
     service_costs: Optional[float] = None
     description: Optional[str] = None
@@ -98,6 +96,11 @@ class PaymentCreate(BaseModel):
     payment_type: str
     payment_method: str = "cash"
     description: str = ""
+    rent_month: Optional[str] = None
+
+class CompanySettingsUpdate(BaseModel):
+    billing_day_of_month: Optional[int] = None
+    late_fee_amount: Optional[float] = None
 
 class BreakerToggle(BaseModel):
     breaker_id: str
@@ -572,6 +575,128 @@ async def upload_payment_proof(request: Request, file: UploadFile = File(...)):
 
 # ============ APARTMENT ROUTES (admin, protected) ============
 
+@api_router.get("/company/settings")
+async def get_company_settings(request: Request):
+    company = await get_current_company(request)
+    return {
+        "billing_day_of_month": company.get("billing_day_of_month", 1),
+        "late_fee_amount": company.get("late_fee_amount", 0),
+        "signature_uploaded": bool(company.get("signature_data")),
+    }
+
+@api_router.put("/company/settings")
+async def update_company_settings(data: CompanySettingsUpdate, request: Request):
+    company = await get_current_company(request)
+    update_data = {}
+    if data.billing_day_of_month is not None:
+        if data.billing_day_of_month < 1 or data.billing_day_of_month > 28:
+            raise HTTPException(status_code=400, detail="Factureringsdag moet tussen 1 en 28 liggen")
+        update_data["billing_day_of_month"] = data.billing_day_of_month
+    if data.late_fee_amount is not None:
+        if data.late_fee_amount < 0:
+            raise HTTPException(status_code=400, detail="Boetebedrag kan niet negatief zijn")
+        update_data["late_fee_amount"] = data.late_fee_amount
+    if update_data:
+        await db.companies.update_one(
+            {"company_id": company["company_id"]},
+            {"$set": update_data}
+        )
+    return {"message": "Instellingen bijgewerkt"}
+
+@api_router.post("/company/signature")
+async def upload_company_signature(request: Request, file: UploadFile = File(...)):
+    company = await get_current_company(request)
+    content = await file.read()
+    if len(content) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Bestand te groot (max 5MB)")
+    if file.content_type not in ["image/png", "image/jpeg", "image/jpg", "image/webp"]:
+        raise HTTPException(status_code=400, detail="Alleen PNG, JPG of WEBP toegestaan")
+    encoded = base64.b64encode(content).decode()
+    await db.companies.update_one(
+        {"company_id": company["company_id"]},
+        {"$set": {"signature_data": encoded, "signature_content_type": file.content_type}}
+    )
+    return {"message": "Handtekening/stempel geüpload"}
+
+@api_router.delete("/company/signature")
+async def delete_company_signature(request: Request):
+    company = await get_current_company(request)
+    await db.companies.update_one(
+        {"company_id": company["company_id"]},
+        {"$unset": {"signature_data": "", "signature_content_type": ""}}
+    )
+    return {"message": "Handtekening/stempel verwijderd"}
+
+@api_router.get("/company/signature/image")
+async def get_company_signature_image(request: Request):
+    company = await get_current_company(request)
+    sig_data = company.get("signature_data")
+    if not sig_data:
+        raise HTTPException(status_code=404, detail="Geen handtekening gevonden")
+    from fastapi.responses import Response as RawResponse
+    file_data = base64.b64decode(sig_data)
+    return RawResponse(content=file_data, media_type=company.get("signature_content_type", "image/png"))
+
+@api_router.get("/kiosk/{company_id}/company/signature")
+async def kiosk_get_company_signature(company_id: str):
+    await check_company_subscription(company_id)
+    company = await db.companies.find_one({"company_id": company_id}, {"_id": 0})
+    sig_data = company.get("signature_data")
+    if not sig_data:
+        raise HTTPException(status_code=404, detail="Geen handtekening gevonden")
+    from fastapi.responses import Response as RawResponse
+    file_data = base64.b64decode(sig_data)
+    return RawResponse(content=file_data, media_type=company.get("signature_content_type", "image/png"))
+
+@api_router.post("/company/apply-late-fees")
+async def apply_late_fees(request: Request):
+    company = await get_current_company(request)
+    cid = company["company_id"]
+    billing_day = company.get("billing_day_of_month", 1)
+    late_fee = company.get("late_fee_amount", 0)
+    if late_fee <= 0:
+        return {"message": "Geen boetebedrag ingesteld", "applied": 0}
+    now = datetime.now(timezone.utc)
+    if now.day <= billing_day:
+        return {"message": "Vervaldatum nog niet bereikt", "applied": 0}
+    current_month = now.strftime("%Y-%m")
+    tenants = await db.tenants.find({"company_id": cid, "status": "active"}, {"_id": 0}).to_list(1000)
+    applied = 0
+    for t in tenants:
+        if (t.get("outstanding_rent", 0) or 0) > 0:
+            already = await db.payments.find_one({
+                "company_id": cid, "tenant_id": t["tenant_id"],
+                "payment_type": "late_fee", "rent_month": current_month
+            })
+            if not already:
+                current_fines = t.get("fines", 0) or 0
+                await db.tenants.update_one(
+                    {"tenant_id": t["tenant_id"]},
+                    {"$set": {"fines": current_fines + late_fee}}
+                )
+                await db.payments.insert_one({
+                    "payment_id": f"fee_{uuid.uuid4().hex[:8]}",
+                    "company_id": cid,
+                    "company_name": company.get("name", ""),
+                    "tenant_id": t["tenant_id"],
+                    "tenant_name": t["name"],
+                    "tenant_code": t["tenant_code"],
+                    "apartment_number": t["apartment_number"],
+                    "apartment_id": t["apartment_id"],
+                    "amount": late_fee,
+                    "payment_type": "late_fee",
+                    "payment_method": "system",
+                    "description": f"Automatische boete - huur niet betaald voor dag {billing_day}",
+                    "rent_month": current_month,
+                    "kwitantie_nummer": f"BOETE-{now.strftime('%Y%m%d')}-{uuid.uuid4().hex[:4].upper()}",
+                    "receipt_number": f"BOETE-{now.strftime('%Y%m%d')}-{uuid.uuid4().hex[:4].upper()}",
+                    "created_at": now.isoformat()
+                })
+                applied += 1
+    return {"message": f"Boetes toegepast op {applied} huurder(s)", "applied": applied}
+
+# ============ APARTMENT ROUTES (admin, protected) ============
+
 @api_router.get("/apartments")
 async def list_apartments(request: Request):
     company = await get_current_company(request)
@@ -593,7 +718,6 @@ async def create_apartment(data: ApartmentCreate, request: Request):
         "apartment_id": apartment_id,
         "company_id": company["company_id"],
         "number": data.number,
-        "floor": data.floor,
         "monthly_rent": data.monthly_rent,
         "service_costs": data.service_costs,
         "description": data.description,
@@ -701,6 +825,10 @@ async def delete_tenant(tenant_id: str, request: Request):
 async def _process_payment(tenant, data, company_id, company_name=""):
     payment_id = f"pay_{uuid.uuid4().hex[:8]}"
     kwitantie_nr = f"KW-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{uuid.uuid4().hex[:4].upper()}"
+    now = datetime.now(timezone.utc)
+    rent_month = data.rent_month
+    if not rent_month and data.payment_type in ["rent", "partial_rent"]:
+        rent_month = now.strftime("%Y-%m")
     doc = {
         "payment_id": payment_id,
         "company_id": company_id,
@@ -715,9 +843,10 @@ async def _process_payment(tenant, data, company_id, company_name=""):
         "payment_type": data.payment_type,
         "payment_method": data.payment_method,
         "description": data.description,
+        "rent_month": rent_month,
         "kwitantie_nummer": kwitantie_nr,
         "receipt_number": kwitantie_nr,
-        "created_at": datetime.now(timezone.utc).isoformat()
+        "created_at": now.isoformat()
     }
     await db.payments.insert_one(doc)
     apt = await db.apartments.find_one({"apartment_id": tenant["apartment_id"]}, {"_id": 0})
@@ -752,11 +881,13 @@ async def create_payment(data: PaymentCreate, request: Request):
     return await _process_payment(tenant, data, cid, company.get("name", ""))
 
 @api_router.get("/payments")
-async def list_payments(request: Request, tenant_id: Optional[str] = None, limit: int = 100):
+async def list_payments(request: Request, tenant_id: Optional[str] = None, month: Optional[str] = None, limit: int = 100):
     company = await get_current_company(request)
     query = {"company_id": company["company_id"]}
     if tenant_id:
         query["tenant_id"] = tenant_id
+    if month:
+        query["created_at"] = {"$regex": f"^{month}"}
     return await db.payments.find(query, {"_id": 0}).sort("created_at", -1).to_list(limit)
 
 @api_router.get("/payments/{payment_id}")
@@ -927,7 +1058,6 @@ async def seed_data():
 
 @app.on_event("startup")
 async def check_expired_subscriptions():
-    now = datetime.now(timezone.utc)
     companies = await db.companies.find(
         {"subscription_status": {"$in": ["trial", "active", "expired"]}},
         {"_id": 0}
