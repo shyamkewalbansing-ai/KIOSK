@@ -21,6 +21,8 @@ Zelfbedieningskiosk-systeem voor appartement huurbetalingen, primair voor de Sur
 │   ├── components/
 │   │   ├── kiosk/             # Huurder-kiosk componenten
 │   │   ├── admin/             # Admin dashboard componenten
+│   │   │   ├── CompanySettings.jsx  # Facturering, boetes, stempel
+│   │   │   └── ...
 │   │   ├── superadmin/        # Super admin portaal
 │   │   └── shared/            # Gedeelde componenten (ReceiptTicket)
 ```
@@ -37,7 +39,7 @@ Zelfbedieningskiosk-systeem voor appartement huurbetalingen, primair voor de Sur
 - **Super Admin**: admin@facturatie.sr / Bharat7755
 - **Demo bedrijf**: demo@vastgoed.sr / demo123
 
-## Wat is Geïmplementeerd
+## Wat is Geimplementeerd
 
 ### Multi-Tenant Architectuur (Voltooid - 22 mrt 2026)
 - Bedrijfsregistratie met e-mail/wachtwoord
@@ -53,28 +55,28 @@ Zelfbedieningskiosk-systeem voor appartement huurbetalingen, primair voor de Sur
 - Bedrijven tab: bedrijfslijst met statusbadges + acties
 - Facturen tab: factuurbeheer + betalingsregistratie
 - Abonnementsstatus: trial/active/expired/deactivated/free
-- Factuur genereren per bedrijf (SRD 3.500)
-- Betaling registreren → abonnement auto-activeren (30 dagen)
-- Gratis abonnement toekennen (geen vervaldatum)
-- Auto-deactivering na grace period
 
-### Kiosk Systeem (Eerder voltooid)
+### Kiosk Systeem (Voltooid)
 - Welkomstscherm met bedrijfsnaam
 - Appartement/huurder selectie
 - Betalingsoverzicht en bevestiging
 - Kwitantie (A4 ontwerp) met auto-redirect
-- Automatische facturering volgende maand
+- Huurmaand (rent_month) wordt automatisch bijgehouden
 
-### Admin Dashboard (Eerder voltooid)
+### Admin Dashboard (Voltooid)
 - Dashboard met statistieken
-- Huurder- en appartementbeheer (CRUD)
-- Betalingsgeschiedenis met kwitanties
+- Huurder- en appartementbeheer (CRUD) - zonder Verdieping veld
+- Betalingsgeschiedenis met kwitanties en maandfilter
+- Instellingen pagina (facturering, boetes, handtekening)
 - Tuya stroomonderbrekerpaneel (mock)
 
-### Landing Page (Voltooid - 22 mrt 2026)
-- SaaS marketing pagina op /
-- Geen publieke bedrijfslijst
-- Registreer/Inloggen knoppen
+### Feature Batch - 22 mrt 2026 (Voltooid)
+1. **Verdieping veld verwijderd** uit appartementformulier en model
+2. **Huurmaand (rent_month)** automatisch bijgehouden bij betalingen
+3. **Factureringsdag & boetes** configureerbaar per bedrijf (dag 1-28, vast boetebedrag)
+4. **Handtekening/stempel upload** voor bedrijven (PNG/JPG/WEBP, max 5MB)
+5. **Maandfilter** op betalingsgeschiedenis
+6. **Bedrijfsinstellingen pagina** (/admin/settings)
 
 ## Openstaande Items
 
@@ -82,11 +84,13 @@ Zelfbedieningskiosk-systeem voor appartement huurbetalingen, primair voor de Sur
 - Print-preview toont niet dezelfde kleuren als schermweergave
 - CSS fix toegepast maar niet geverifieerd
 
-### P2 - Export Rapporten
-- CSV/PDF export van betalingsrapporten
+### P2 - Backend Saldo Berekening
+- Mogelijke bug in balance check bij geautomatiseerde tests
+- Handmatige tests lijken te werken
 
 ## Toekomstige Taken
 - Tuya API integratie voor stroomonderbrekers
 - SMS/WhatsApp herinneringen
+- CSV/PDF export van betalingsrapporten
 - Multi-building support per bedrijf
-- Dark mode voor admin dashboard
+- E-mail notificaties voor verlopen abonnementen
