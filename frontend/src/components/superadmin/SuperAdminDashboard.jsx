@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
   Shield, LogOut, Building2, BarChart3, FileText, Users, CheckCircle, XCircle,
-  Clock, Gift, Loader2, CreditCard, AlertTriangle, Zap
+  Clock, Gift, Loader2, CreditCard, AlertTriangle, Zap, Trash2
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 
@@ -73,6 +73,10 @@ export default function SuperAdminDashboard() {
       if (action === 'activate') await ax.put(`${API}/superadmin/companies/${companyId}/activate`);
       else if (action === 'deactivate') await ax.put(`${API}/superadmin/companies/${companyId}/deactivate`);
       else if (action === 'free') await ax.put(`${API}/superadmin/companies/${companyId}/free-subscription`);
+      else if (action === 'delete') {
+        if (!window.confirm('Weet u zeker dat u dit bedrijf en alle bijbehorende data wilt verwijderen?')) { setProcessing(false); return; }
+        await ax.delete(`${API}/superadmin/companies/${companyId}`);
+      }
       await loadData();
     } catch {} finally { setProcessing(false); }
   };
@@ -93,6 +97,15 @@ export default function SuperAdminDashboard() {
         paid_amount: parseFloat(payAmount)
       });
       setPayDialog(null);
+      await loadData();
+    } catch {} finally { setProcessing(false); }
+  };
+
+  const handleDeleteInvoice = async (invoiceId) => {
+    if (!window.confirm('Weet u zeker dat u deze factuur wilt verwijderen?')) return;
+    setProcessing(true);
+    try {
+      await ax.delete(`${API}/superadmin/invoices/${invoiceId}`);
       await loadData();
     } catch {} finally { setProcessing(false); }
   };
@@ -233,6 +246,10 @@ export default function SuperAdminDashboard() {
                     className="px-4 py-2 bg-[#0f172a] text-white rounded-xl text-xs font-bold hover:bg-[#1e293b] flex items-center gap-1.5">
                     <FileText className="w-3.5 h-3.5" />Factuur genereren
                   </button>
+                  <button onClick={() => handleAction(c.company_id, 'delete')} disabled={processing} data-testid={`sa-delete-${c.company_id}`}
+                    className="px-4 py-2 bg-red-100 text-red-700 rounded-xl text-xs font-bold hover:bg-red-200 flex items-center gap-1.5">
+                    <Trash2 className="w-3.5 h-3.5" />Verwijderen
+                  </button>
                 </div>
               </div>
             ))}
@@ -277,10 +294,24 @@ export default function SuperAdminDashboard() {
                   </div>
                 )}
                 {inv.status === 'pending' && (
-                  <button onClick={() => { setPayDialog(inv); setPayAmount('3500'); }} data-testid={`sa-pay-${inv.invoice_id}`}
-                    className="mt-4 px-5 py-2.5 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 flex items-center gap-2">
-                    <CreditCard className="w-4 h-4" />Betaling registreren
-                  </button>
+                  <div className="mt-4 flex gap-2">
+                    <button onClick={() => { setPayDialog(inv); setPayAmount('3500'); }} data-testid={`sa-pay-${inv.invoice_id}`}
+                      className="px-5 py-2.5 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 flex items-center gap-2">
+                      <CreditCard className="w-4 h-4" />Betaling registreren
+                    </button>
+                    <button onClick={() => handleDeleteInvoice(inv.invoice_id)} disabled={processing} data-testid={`sa-del-inv-${inv.invoice_id}`}
+                      className="px-5 py-2.5 bg-red-100 text-red-700 rounded-xl text-sm font-bold hover:bg-red-200 flex items-center gap-2">
+                      <Trash2 className="w-4 h-4" />Verwijderen
+                    </button>
+                  </div>
+                )}
+                {inv.status === 'paid' && (
+                  <div className="mt-4">
+                    <button onClick={() => handleDeleteInvoice(inv.invoice_id)} disabled={processing} data-testid={`sa-del-inv-${inv.invoice_id}`}
+                      className="px-5 py-2.5 bg-red-100 text-red-700 rounded-xl text-sm font-bold hover:bg-red-200 flex items-center gap-2">
+                      <Trash2 className="w-4 h-4" />Verwijderen
+                    </button>
+                  </div>
                 )}
               </div>
             ))}

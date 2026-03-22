@@ -296,6 +296,21 @@ async def sa_free_subscription(company_id: str, request: Request):
     )
     return {"message": "Gratis abonnement toegekend (geen vervaldatum)"}
 
+@api_router.delete("/superadmin/companies/{company_id}")
+async def sa_delete_company(company_id: str, request: Request):
+    await get_superadmin(request)
+    company = await db.companies.find_one({"company_id": company_id})
+    if not company:
+        raise HTTPException(status_code=404, detail="Bedrijf niet gevonden")
+    await db.companies.delete_one({"company_id": company_id})
+    await db.company_sessions.delete_many({"company_id": company_id})
+    await db.apartments.delete_many({"company_id": company_id})
+    await db.tenants.delete_many({"company_id": company_id})
+    await db.payments.delete_many({"company_id": company_id})
+    await db.breakers.delete_many({"company_id": company_id})
+    await db.invoices.delete_many({"company_id": company_id})
+    return {"message": "Bedrijf en alle bijbehorende data verwijderd"}
+
 # ============ SUPER ADMIN: INVOICES ============
 
 @api_router.get("/superadmin/invoices")
@@ -355,6 +370,14 @@ async def sa_register_payment(invoice_id: str, data: RegisterPayment, request: R
         {"$set": {"subscription_status": "active", "subscription_end": sub_end}}
     )
     return {"message": f"Betaling geregistreerd. Abonnement actief tot {sub_end[:10]}"}
+
+@api_router.delete("/superadmin/invoices/{invoice_id}")
+async def sa_delete_invoice(invoice_id: str, request: Request):
+    await get_superadmin(request)
+    result = await db.invoices.delete_one({"invoice_id": invoice_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Factuur niet gevonden")
+    return {"message": "Factuur verwijderd"}
 
 @api_router.get("/superadmin/stats")
 async def sa_stats(request: Request):
