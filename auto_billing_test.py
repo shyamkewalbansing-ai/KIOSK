@@ -10,7 +10,7 @@ import sys
 import json
 
 class AutoBillingTester:
-    def __init__(self, base_url="https://surinaam-rent-hub.preview.emergentagent.com"):
+    def __init__(self, base_url="https://kiosk-huur.preview.emergentagent.com"):
         self.base_url = base_url
         self.tests_run = 0
         self.tests_passed = 0
