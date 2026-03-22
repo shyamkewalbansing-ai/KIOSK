@@ -25,6 +25,17 @@ api_router = APIRouter(prefix="/api")
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# ============ CONSTANTS ============
+
+SUPERADMIN_EMAIL = "admin@facturatie.sr"
+SUPERADMIN_PASSWORD = "Bharat7755"
+SUBSCRIPTION_PRICE = 3500
+TRIAL_DAYS = 3
+GRACE_DAYS = 3
+BANK_NAME = "Hakrinbank"
+BANK_ACCOUNT = "205911044"
+BANK_REFERENCE = "5978934982"
+
 # ============ MODELS ============
 
 class CompanyRegister(BaseModel):
@@ -37,6 +48,13 @@ class CompanyRegister(BaseModel):
 class CompanyLogin(BaseModel):
     email: str
     password: str
+
+class SuperAdminLogin(BaseModel):
+    email: str
+    password: str
+
+class RegisterPayment(BaseModel):
+    paid_amount: float
 
 class ApartmentCreate(BaseModel):
     number: str
@@ -99,7 +117,61 @@ def verify_password(password: str, stored: str) -> bool:
     except Exception:
         return False
 
-# ============ AUTH HELPER ============
+def parse_dt(val):
+    if not val:
+        return None
+    if isinstance(val, datetime):
+        dt = val
+    else:
+        dt = datetime.fromisoformat(str(val))
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
+
+# ============ SUBSCRIPTION LOGIC ============
+
+async def update_subscription_status(company: dict) -> dict:
+    status = company.get("subscription_status", "trial")
+    now = datetime.now(timezone.utc)
+    if status == "free":
+        return company
+    new_status = None
+    if status == "trial":
+        trial_end = parse_dt(company.get("trial_end"))
+        if trial_end and now > trial_end:
+            grace_end = trial_end + timedelta(days=GRACE_DAYS)
+            new_status = "deactivated" if now > grace_end else "expired"
+    elif status == "active":
+        sub_end = parse_dt(company.get("subscription_end"))
+        if sub_end and now > sub_end:
+            grace_end = sub_end + timedelta(days=GRACE_DAYS)
+            new_status = "deactivated" if now > grace_end else "expired"
+    elif status == "expired":
+        trial_end = parse_dt(company.get("trial_end"))
+        sub_end = parse_dt(company.get("subscription_end"))
+        ref = sub_end or trial_end
+        if ref:
+            grace_end = ref + timedelta(days=GRACE_DAYS)
+            if now > grace_end:
+                new_status = "deactivated"
+    if new_status and new_status != status:
+        await db.companies.update_one(
+            {"company_id": company["company_id"]},
+            {"$set": {"subscription_status": new_status}}
+        )
+        company["subscription_status"] = new_status
+    return company
+
+async def check_company_subscription(company_id: str) -> dict:
+    company = await db.companies.find_one({"company_id": company_id}, {"_id": 0})
+    if not company:
+        raise HTTPException(status_code=404, detail="Bedrijf niet gevonden")
+    company = await update_subscription_status(company)
+    if company["subscription_status"] == "deactivated":
+        raise HTTPException(status_code=403, detail="Service niet beschikbaar. Het abonnement van dit bedrijf is verlopen.")
+    return company
+
+# ============ AUTH HELPERS ============
 
 async def get_current_company(request: Request) -> dict:
     session_token = request.cookies.get("session_token")
@@ -112,17 +184,209 @@ async def get_current_company(request: Request) -> dict:
     session = await db.company_sessions.find_one({"session_token": session_token}, {"_id": 0})
     if not session:
         raise HTTPException(status_code=401, detail="Sessie ongeldig")
-    expires_at = session["expires_at"]
-    if isinstance(expires_at, str):
-        expires_at = datetime.fromisoformat(expires_at)
-    if expires_at.tzinfo is None:
-        expires_at = expires_at.replace(tzinfo=timezone.utc)
-    if expires_at < datetime.now(timezone.utc):
+    expires_at = parse_dt(session["expires_at"])
+    if expires_at and expires_at < datetime.now(timezone.utc):
         raise HTTPException(status_code=401, detail="Sessie verlopen")
     company = await db.companies.find_one({"company_id": session["company_id"]}, {"_id": 0})
     if not company:
         raise HTTPException(status_code=401, detail="Bedrijf niet gevonden")
+    company = await update_subscription_status(company)
+    if company["subscription_status"] == "deactivated":
+        raise HTTPException(status_code=403, detail="Uw abonnement is gedeactiveerd. Neem contact op met de beheerder.")
     return company
+
+async def get_superadmin(request: Request):
+    session_token = request.cookies.get("sa_session_token")
+    if not session_token:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            session_token = auth_header.split(" ")[1]
+    if not session_token:
+        raise HTTPException(status_code=401, detail="Niet ingelogd als super admin")
+    session = await db.superadmin_sessions.find_one({"session_token": session_token}, {"_id": 0})
+    if not session:
+        raise HTTPException(status_code=401, detail="Super admin sessie ongeldig")
+    expires_at = parse_dt(session["expires_at"])
+    if expires_at and expires_at < datetime.now(timezone.utc):
+        raise HTTPException(status_code=401, detail="Sessie verlopen")
+    return True
+
+# ============ SUPER ADMIN AUTH ============
+
+@api_router.post("/superadmin/login")
+async def superadmin_login(data: SuperAdminLogin, response: Response):
+    if data.email != SUPERADMIN_EMAIL or data.password != SUPERADMIN_PASSWORD:
+        raise HTTPException(status_code=401, detail="Ongeldig e-mailadres of wachtwoord")
+    session_token = secrets.token_hex(32)
+    await db.superadmin_sessions.insert_one({
+        "session_token": session_token,
+        "expires_at": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    response.set_cookie(
+        key="sa_session_token", value=session_token,
+        httponly=True, secure=True, samesite="none",
+        path="/", max_age=7*24*60*60
+    )
+    return {"email": SUPERADMIN_EMAIL, "role": "superadmin"}
+
+@api_router.get("/superadmin/me")
+async def superadmin_me(request: Request):
+    await get_superadmin(request)
+    return {"email": SUPERADMIN_EMAIL, "role": "superadmin"}
+
+@api_router.post("/superadmin/logout")
+async def superadmin_logout(request: Request, response: Response):
+    token = request.cookies.get("sa_session_token")
+    if token:
+        await db.superadmin_sessions.delete_many({"session_token": token})
+    response.delete_cookie(key="sa_session_token", path="/", secure=True, samesite="none")
+    return {"message": "Uitgelogd"}
+
+# ============ SUPER ADMIN: COMPANIES ============
+
+@api_router.get("/superadmin/companies")
+async def sa_list_companies(request: Request):
+    await get_superadmin(request)
+    companies = await db.companies.find({}, {"_id": 0, "password_hash": 0}).to_list(500)
+    for c in companies:
+        await update_subscription_status(c)
+    return companies
+
+@api_router.get("/superadmin/companies/{company_id}")
+async def sa_get_company(company_id: str, request: Request):
+    await get_superadmin(request)
+    company = await db.companies.find_one({"company_id": company_id}, {"_id": 0, "password_hash": 0})
+    if not company:
+        raise HTTPException(status_code=404, detail="Bedrijf niet gevonden")
+    company = await update_subscription_status(company)
+    apt_count = await db.apartments.count_documents({"company_id": company_id})
+    tenant_count = await db.tenants.count_documents({"company_id": company_id, "status": "active"})
+    payment_count = await db.payments.count_documents({"company_id": company_id})
+    company["apartment_count"] = apt_count
+    company["tenant_count"] = tenant_count
+    company["payment_count"] = payment_count
+    return company
+
+@api_router.put("/superadmin/companies/{company_id}/activate")
+async def sa_activate_company(company_id: str, request: Request):
+    await get_superadmin(request)
+    now = datetime.now(timezone.utc)
+    await db.companies.update_one(
+        {"company_id": company_id},
+        {"$set": {"subscription_status": "active", "subscription_end": (now + timedelta(days=30)).isoformat()}}
+    )
+    return {"message": "Bedrijf geactiveerd voor 30 dagen"}
+
+@api_router.put("/superadmin/companies/{company_id}/deactivate")
+async def sa_deactivate_company(company_id: str, request: Request):
+    await get_superadmin(request)
+    await db.companies.update_one(
+        {"company_id": company_id},
+        {"$set": {"subscription_status": "deactivated"}}
+    )
+    return {"message": "Bedrijf gedeactiveerd"}
+
+@api_router.put("/superadmin/companies/{company_id}/free-subscription")
+async def sa_free_subscription(company_id: str, request: Request):
+    await get_superadmin(request)
+    await db.companies.update_one(
+        {"company_id": company_id},
+        {"$set": {"subscription_status": "free", "is_free": True}}
+    )
+    return {"message": "Gratis abonnement toegekend (geen vervaldatum)"}
+
+# ============ SUPER ADMIN: INVOICES ============
+
+@api_router.get("/superadmin/invoices")
+async def sa_list_invoices(request: Request, status: Optional[str] = None):
+    await get_superadmin(request)
+    query = {}
+    if status:
+        query["status"] = status
+    return await db.invoices.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
+
+@api_router.post("/superadmin/invoices/generate/{company_id}")
+async def sa_generate_invoice(company_id: str, request: Request):
+    await get_superadmin(request)
+    company = await db.companies.find_one({"company_id": company_id}, {"_id": 0, "password_hash": 0})
+    if not company:
+        raise HTTPException(status_code=404, detail="Bedrijf niet gevonden")
+    now = datetime.now(timezone.utc)
+    inv_count = await db.invoices.count_documents({})
+    invoice_number = f"FAC-{now.strftime('%Y')}-{str(inv_count + 1).zfill(4)}"
+    invoice = {
+        "invoice_id": f"inv_{uuid.uuid4().hex[:8]}",
+        "invoice_number": invoice_number,
+        "company_id": company_id,
+        "company_name": company["name"],
+        "company_email": company.get("email", ""),
+        "amount": SUBSCRIPTION_PRICE,
+        "description": "Maandabonnement Appartement Kiosk",
+        "period_start": now.isoformat(),
+        "period_end": (now + timedelta(days=30)).isoformat(),
+        "status": "pending",
+        "paid_amount": 0,
+        "paid_at": None,
+        "bank_name": BANK_NAME,
+        "bank_account": BANK_ACCOUNT,
+        "bank_reference": BANK_REFERENCE,
+        "created_at": now.isoformat()
+    }
+    await db.invoices.insert_one(invoice)
+    return await db.invoices.find_one({"invoice_id": invoice["invoice_id"]}, {"_id": 0})
+
+@api_router.post("/superadmin/invoices/{invoice_id}/register-payment")
+async def sa_register_payment(invoice_id: str, data: RegisterPayment, request: Request):
+    await get_superadmin(request)
+    invoice = await db.invoices.find_one({"invoice_id": invoice_id}, {"_id": 0})
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Factuur niet gevonden")
+    if invoice["status"] == "paid":
+        raise HTTPException(status_code=400, detail="Factuur is al betaald")
+    now = datetime.now(timezone.utc)
+    await db.invoices.update_one(
+        {"invoice_id": invoice_id},
+        {"$set": {"status": "paid", "paid_amount": data.paid_amount, "paid_at": now.isoformat()}}
+    )
+    sub_end = (now + timedelta(days=30)).isoformat()
+    await db.companies.update_one(
+        {"company_id": invoice["company_id"]},
+        {"$set": {"subscription_status": "active", "subscription_end": sub_end}}
+    )
+    return {"message": f"Betaling geregistreerd. Abonnement actief tot {sub_end[:10]}"}
+
+@api_router.get("/superadmin/stats")
+async def sa_stats(request: Request):
+    await get_superadmin(request)
+    total = await db.companies.count_documents({})
+    trial = await db.companies.count_documents({"subscription_status": "trial"})
+    active = await db.companies.count_documents({"subscription_status": "active"})
+    free = await db.companies.count_documents({"subscription_status": "free"})
+    expired = await db.companies.count_documents({"subscription_status": "expired"})
+    deactivated = await db.companies.count_documents({"subscription_status": "deactivated"})
+    total_invoices = await db.invoices.count_documents({})
+    paid_invoices = await db.invoices.count_documents({"status": "paid"})
+    pending_invoices = await db.invoices.count_documents({"status": "pending"})
+    pipeline = [{"$match": {"status": "paid"}}, {"$group": {"_id": None, "total": {"$sum": "$paid_amount"}}}]
+    rev = await db.invoices.aggregate(pipeline).to_list(1)
+    total_revenue = rev[0]["total"] if rev else 0
+    return {
+        "total_companies": total,
+        "trial_companies": trial,
+        "active_companies": active,
+        "free_companies": free,
+        "expired_companies": expired,
+        "deactivated_companies": deactivated,
+        "total_invoices": total_invoices,
+        "paid_invoices": paid_invoices,
+        "pending_invoices": pending_invoices,
+        "total_revenue": total_revenue,
+        "subscription_price": SUBSCRIPTION_PRICE,
+        "bank_name": BANK_NAME,
+        "bank_account": BANK_ACCOUNT,
+        "bank_reference": BANK_REFERENCE,
+    }
 
 # ============ COMPANY AUTH ROUTES ============
 
@@ -131,6 +395,7 @@ async def register_company(data: CompanyRegister, response: Response):
     existing = await db.companies.find_one({"email": data.email})
     if existing:
         raise HTTPException(status_code=400, detail="E-mailadres is al geregistreerd")
+    now = datetime.now(timezone.utc)
     company_id = f"comp_{uuid.uuid4().hex[:8]}"
     await db.companies.insert_one({
         "company_id": company_id,
@@ -139,14 +404,18 @@ async def register_company(data: CompanyRegister, response: Response):
         "password_hash": hash_password(data.password),
         "address": data.address,
         "phone": data.phone,
-        "created_at": datetime.now(timezone.utc).isoformat()
+        "subscription_status": "trial",
+        "trial_end": (now + timedelta(days=TRIAL_DAYS)).isoformat(),
+        "subscription_end": None,
+        "is_free": False,
+        "created_at": now.isoformat()
     })
     session_token = secrets.token_hex(32)
     await db.company_sessions.insert_one({
         "company_id": company_id,
         "session_token": session_token,
-        "expires_at": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
-        "created_at": datetime.now(timezone.utc).isoformat()
+        "expires_at": (now + timedelta(days=7)).isoformat(),
+        "created_at": now.isoformat()
     })
     response.set_cookie(
         key="session_token", value=session_token,
@@ -187,11 +456,6 @@ async def company_logout(request: Request, response: Response):
         await db.company_sessions.delete_many({"session_token": session_token})
     response.delete_cookie(key="session_token", path="/", secure=True, samesite="none")
     return {"message": "Uitgelogd"}
-
-@api_router.get("/companies/public")
-async def list_companies_public():
-    companies = await db.companies.find({}, {"_id": 0, "password_hash": 0}).to_list(100)
-    return companies
 
 # ============ APARTMENT ROUTES (admin, protected) ============
 
@@ -420,7 +684,10 @@ async def dashboard_stats(request: Request):
         "outstanding_rent": outstanding.get("rent", 0),
         "outstanding_services": outstanding.get("services", 0),
         "outstanding_fines": outstanding.get("fines", 0),
-        "recent_payments": recent_payments
+        "recent_payments": recent_payments,
+        "subscription_status": company.get("subscription_status", "trial"),
+        "trial_end": company.get("trial_end"),
+        "subscription_end": company.get("subscription_end"),
     }
 
 # ============ BREAKER ROUTES (admin, protected) ============
@@ -447,30 +714,22 @@ async def toggle_breaker(data: BreakerToggle, request: Request):
 
 @api_router.get("/kiosk/{company_id}/company")
 async def kiosk_get_company(company_id: str):
-    company = await db.companies.find_one({"company_id": company_id}, {"_id": 0, "password_hash": 0})
-    if not company:
-        raise HTTPException(status_code=404, detail="Bedrijf niet gevonden")
-    return company
+    company = await check_company_subscription(company_id)
+    return {k: v for k, v in company.items() if k not in ("password_hash",)}
 
 @api_router.get("/kiosk/{company_id}/apartments")
 async def kiosk_list_apartments(company_id: str):
-    company = await db.companies.find_one({"company_id": company_id})
-    if not company:
-        raise HTTPException(status_code=404, detail="Bedrijf niet gevonden")
+    await check_company_subscription(company_id)
     return await db.apartments.find({"company_id": company_id}, {"_id": 0}).to_list(1000)
 
 @api_router.get("/kiosk/{company_id}/tenants")
 async def kiosk_list_tenants(company_id: str):
-    company = await db.companies.find_one({"company_id": company_id})
-    if not company:
-        raise HTTPException(status_code=404, detail="Bedrijf niet gevonden")
+    await check_company_subscription(company_id)
     return await db.tenants.find({"company_id": company_id}, {"_id": 0}).to_list(1000)
 
 @api_router.get("/kiosk/{company_id}/tenants/lookup/{query}")
 async def kiosk_lookup_tenant(company_id: str, query: str):
-    company = await db.companies.find_one({"company_id": company_id})
-    if not company:
-        raise HTTPException(status_code=404, detail="Bedrijf niet gevonden")
+    await check_company_subscription(company_id)
     tenant = await db.tenants.find_one(
         {"company_id": company_id, "$or": [{"tenant_code": query.upper()}, {"apartment_number": query.upper()}]},
         {"_id": 0}
@@ -481,9 +740,7 @@ async def kiosk_lookup_tenant(company_id: str, query: str):
 
 @api_router.post("/kiosk/{company_id}/payments")
 async def kiosk_create_payment(company_id: str, data: PaymentCreate):
-    company = await db.companies.find_one({"company_id": company_id}, {"_id": 0})
-    if not company:
-        raise HTTPException(status_code=404, detail="Bedrijf niet gevonden")
+    company = await check_company_subscription(company_id)
     tenant = await db.tenants.find_one({"tenant_id": data.tenant_id, "company_id": company_id}, {"_id": 0})
     if not tenant:
         raise HTTPException(status_code=404, detail="Huurder niet gevonden")
@@ -495,12 +752,25 @@ async def kiosk_create_payment(company_id: str, data: PaymentCreate):
 async def seed_data():
     demo = await db.companies.find_one({"company_id": "comp_demo"})
     if demo:
+        if "subscription_status" not in demo:
+            now = datetime.now(timezone.utc)
+            await db.companies.update_one(
+                {"company_id": "comp_demo"},
+                {"$set": {
+                    "subscription_status": "active",
+                    "trial_end": now.isoformat(),
+                    "subscription_end": (now + timedelta(days=30)).isoformat(),
+                    "is_free": False,
+                }}
+            )
+            logger.info("Updated comp_demo with subscription fields")
         return
     logger.info("Seeding multi-tenant demo data...")
     await db.apartments.delete_many({"company_id": {"$exists": False}})
     await db.tenants.delete_many({"company_id": {"$exists": False}})
     await db.payments.delete_many({"company_id": {"$exists": False}})
     await db.breakers.delete_many({"company_id": {"$exists": False}})
+    now = datetime.now(timezone.utc)
     cid = "comp_demo"
     await db.companies.insert_one({
         "company_id": cid,
@@ -509,34 +779,49 @@ async def seed_data():
         "password_hash": hash_password("demo123"),
         "address": "Kernkampweg 15, Paramaribo",
         "phone": "+597 400-000",
-        "created_at": datetime.now(timezone.utc).isoformat()
+        "subscription_status": "active",
+        "trial_end": now.isoformat(),
+        "subscription_end": (now + timedelta(days=30)).isoformat(),
+        "is_free": False,
+        "created_at": now.isoformat()
     })
     apartments = [
-        {"apartment_id": "apt_001", "company_id": cid, "number": "A101", "floor": 1, "monthly_rent": 2500, "service_costs": 150, "description": "2-kamer appartement", "status": "occupied", "created_at": datetime.now(timezone.utc).isoformat()},
-        {"apartment_id": "apt_002", "company_id": cid, "number": "A102", "floor": 1, "monthly_rent": 2800, "service_costs": 175, "description": "3-kamer appartement", "status": "occupied", "created_at": datetime.now(timezone.utc).isoformat()},
-        {"apartment_id": "apt_003", "company_id": cid, "number": "A201", "floor": 2, "monthly_rent": 3000, "service_costs": 200, "description": "3-kamer appartement met balkon", "status": "occupied", "created_at": datetime.now(timezone.utc).isoformat()},
-        {"apartment_id": "apt_004", "company_id": cid, "number": "A202", "floor": 2, "monthly_rent": 2200, "service_costs": 125, "description": "Studio appartement", "status": "vacant", "created_at": datetime.now(timezone.utc).isoformat()},
-        {"apartment_id": "apt_005", "company_id": cid, "number": "B101", "floor": 1, "monthly_rent": 3500, "service_costs": 250, "description": "4-kamer appartement", "status": "occupied", "created_at": datetime.now(timezone.utc).isoformat()},
-        {"apartment_id": "apt_006", "company_id": cid, "number": "B102", "floor": 1, "monthly_rent": 2000, "service_costs": 100, "description": "1-kamer studio", "status": "vacant", "created_at": datetime.now(timezone.utc).isoformat()},
+        {"apartment_id": "apt_001", "company_id": cid, "number": "A101", "floor": 1, "monthly_rent": 2500, "service_costs": 150, "description": "2-kamer appartement", "status": "occupied", "created_at": now.isoformat()},
+        {"apartment_id": "apt_002", "company_id": cid, "number": "A102", "floor": 1, "monthly_rent": 2800, "service_costs": 175, "description": "3-kamer appartement", "status": "occupied", "created_at": now.isoformat()},
+        {"apartment_id": "apt_003", "company_id": cid, "number": "A201", "floor": 2, "monthly_rent": 3000, "service_costs": 200, "description": "3-kamer appartement met balkon", "status": "occupied", "created_at": now.isoformat()},
+        {"apartment_id": "apt_004", "company_id": cid, "number": "A202", "floor": 2, "monthly_rent": 2200, "service_costs": 125, "description": "Studio appartement", "status": "vacant", "created_at": now.isoformat()},
+        {"apartment_id": "apt_005", "company_id": cid, "number": "B101", "floor": 1, "monthly_rent": 3500, "service_costs": 250, "description": "4-kamer appartement", "status": "occupied", "created_at": now.isoformat()},
+        {"apartment_id": "apt_006", "company_id": cid, "number": "B102", "floor": 1, "monthly_rent": 2000, "service_costs": 100, "description": "1-kamer studio", "status": "vacant", "created_at": now.isoformat()},
     ]
     await db.apartments.insert_many(apartments)
     tenants = [
-        {"tenant_id": "ten_001", "company_id": cid, "tenant_code": "HUR001", "name": "Radjesh Kanhai", "apartment_id": "apt_001", "apartment_number": "A101", "phone": "+597 8123456", "email": "radjesh@email.com", "monthly_rent": 2500, "outstanding_rent": 5000, "service_costs": 300, "fines": 0, "deposit_required": 5000, "deposit_paid": 5000, "status": "active", "created_at": datetime.now(timezone.utc).isoformat()},
-        {"tenant_id": "ten_002", "company_id": cid, "tenant_code": "HUR002", "name": "Maria Janssen", "apartment_id": "apt_002", "apartment_number": "A102", "phone": "+597 8234567", "email": "maria@email.com", "monthly_rent": 2800, "outstanding_rent": 2800, "service_costs": 175, "fines": 500, "deposit_required": 5600, "deposit_paid": 5600, "status": "active", "created_at": datetime.now(timezone.utc).isoformat()},
-        {"tenant_id": "ten_003", "company_id": cid, "tenant_code": "HUR003", "name": "Andre Pengel", "apartment_id": "apt_003", "apartment_number": "A201", "phone": "+597 8345678", "email": "andre@email.com", "monthly_rent": 3000, "outstanding_rent": 9000, "service_costs": 600, "fines": 250, "deposit_required": 6000, "deposit_paid": 3000, "status": "active", "created_at": datetime.now(timezone.utc).isoformat()},
-        {"tenant_id": "ten_004", "company_id": cid, "tenant_code": "HUR004", "name": "Shanti Ramsodit", "apartment_id": "apt_005", "apartment_number": "B101", "phone": "+597 8456789", "email": "shanti@email.com", "monthly_rent": 3500, "outstanding_rent": 3500, "service_costs": 250, "fines": 0, "deposit_required": 7000, "deposit_paid": 7000, "status": "active", "created_at": datetime.now(timezone.utc).isoformat()},
+        {"tenant_id": "ten_001", "company_id": cid, "tenant_code": "HUR001", "name": "Radjesh Kanhai", "apartment_id": "apt_001", "apartment_number": "A101", "phone": "+597 8123456", "email": "radjesh@email.com", "monthly_rent": 2500, "outstanding_rent": 5000, "service_costs": 300, "fines": 0, "deposit_required": 5000, "deposit_paid": 5000, "status": "active", "created_at": now.isoformat()},
+        {"tenant_id": "ten_002", "company_id": cid, "tenant_code": "HUR002", "name": "Maria Janssen", "apartment_id": "apt_002", "apartment_number": "A102", "phone": "+597 8234567", "email": "maria@email.com", "monthly_rent": 2800, "outstanding_rent": 2800, "service_costs": 175, "fines": 500, "deposit_required": 5600, "deposit_paid": 5600, "status": "active", "created_at": now.isoformat()},
+        {"tenant_id": "ten_003", "company_id": cid, "tenant_code": "HUR003", "name": "Andre Pengel", "apartment_id": "apt_003", "apartment_number": "A201", "phone": "+597 8345678", "email": "andre@email.com", "monthly_rent": 3000, "outstanding_rent": 9000, "service_costs": 600, "fines": 250, "deposit_required": 6000, "deposit_paid": 3000, "status": "active", "created_at": now.isoformat()},
+        {"tenant_id": "ten_004", "company_id": cid, "tenant_code": "HUR004", "name": "Shanti Ramsodit", "apartment_id": "apt_005", "apartment_number": "B101", "phone": "+597 8456789", "email": "shanti@email.com", "monthly_rent": 3500, "outstanding_rent": 3500, "service_costs": 250, "fines": 0, "deposit_required": 7000, "deposit_paid": 7000, "status": "active", "created_at": now.isoformat()},
     ]
     await db.tenants.insert_many(tenants)
     breakers = [
-        {"breaker_id": "brk_001", "company_id": cid, "apartment_number": "A101", "name": "Hoofdstroom A101", "status": "on", "last_toggled": datetime.now(timezone.utc).isoformat()},
-        {"breaker_id": "brk_002", "company_id": cid, "apartment_number": "A102", "name": "Hoofdstroom A102", "status": "on", "last_toggled": datetime.now(timezone.utc).isoformat()},
-        {"breaker_id": "brk_003", "company_id": cid, "apartment_number": "A201", "name": "Hoofdstroom A201", "status": "on", "last_toggled": datetime.now(timezone.utc).isoformat()},
-        {"breaker_id": "brk_004", "company_id": cid, "apartment_number": "A202", "name": "Hoofdstroom A202", "status": "off", "last_toggled": datetime.now(timezone.utc).isoformat()},
-        {"breaker_id": "brk_005", "company_id": cid, "apartment_number": "B101", "name": "Hoofdstroom B101", "status": "on", "last_toggled": datetime.now(timezone.utc).isoformat()},
-        {"breaker_id": "brk_006", "company_id": cid, "apartment_number": "B102", "name": "Hoofdstroom B102", "status": "off", "last_toggled": datetime.now(timezone.utc).isoformat()},
+        {"breaker_id": "brk_001", "company_id": cid, "apartment_number": "A101", "name": "Hoofdstroom A101", "status": "on", "last_toggled": now.isoformat()},
+        {"breaker_id": "brk_002", "company_id": cid, "apartment_number": "A102", "name": "Hoofdstroom A102", "status": "on", "last_toggled": now.isoformat()},
+        {"breaker_id": "brk_003", "company_id": cid, "apartment_number": "A201", "name": "Hoofdstroom A201", "status": "on", "last_toggled": now.isoformat()},
+        {"breaker_id": "brk_004", "company_id": cid, "apartment_number": "A202", "name": "Hoofdstroom A202", "status": "off", "last_toggled": now.isoformat()},
+        {"breaker_id": "brk_005", "company_id": cid, "apartment_number": "B101", "name": "Hoofdstroom B101", "status": "on", "last_toggled": now.isoformat()},
+        {"breaker_id": "brk_006", "company_id": cid, "apartment_number": "B102", "name": "Hoofdstroom B102", "status": "off", "last_toggled": now.isoformat()},
     ]
     await db.breakers.insert_many(breakers)
     logger.info("Multi-tenant demo data seeded! Login: demo@vastgoed.sr / demo123")
+
+@app.on_event("startup")
+async def check_expired_subscriptions():
+    now = datetime.now(timezone.utc)
+    companies = await db.companies.find(
+        {"subscription_status": {"$in": ["trial", "active", "expired"]}},
+        {"_id": 0}
+    ).to_list(1000)
+    for c in companies:
+        await update_subscription_status(c)
+    logger.info(f"Subscription check complete for {len(companies)} companies")
 
 app.include_router(api_router)
 

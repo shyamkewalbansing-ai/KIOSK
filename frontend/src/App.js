@@ -13,6 +13,8 @@ import TenantManagement from "./components/admin/TenantManagement";
 import ApartmentManagement from "./components/admin/ApartmentManagement";
 import PaymentHistory from "./components/admin/PaymentHistory";
 import TuyaBreakerPanel from "./components/admin/TuyaBreakerPanel";
+import SuperAdminLogin from "./components/superadmin/SuperAdminLogin";
+import SuperAdminDashboard from "./components/superadmin/SuperAdminDashboard";
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -56,6 +58,8 @@ function App() {
             <Route path="payments" element={<PaymentHistory />} />
             <Route path="breakers" element={<TuyaBreakerPanel />} />
           </Route>
+          <Route path="/superadmin/login" element={<SuperAdminLogin />} />
+          <Route path="/superadmin" element={<SuperAdminDashboard />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <Toaster position="top-center" richColors />
