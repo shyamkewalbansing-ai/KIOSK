@@ -10,7 +10,7 @@ const TYPE_LABELS = {
   deposit: 'Borgsom',
 };
 
-export default function KwitantieTicket({ payment, tenant, preview = false, signatureUrl = null }) {
+export default function KwitantieTicket({ payment, tenant, preview = false, stampData = null }) {
   if (!payment) return null;
 
   const date = new Date(payment.created_at);
@@ -230,28 +230,58 @@ export default function KwitantieTicket({ payment, tenant, preview = false, sign
             Betalingen worden direct verwerkt en zijn niet restitueerbaar.
           </div>
         </div>
-        {/* Stamp / Signature */}
+        {/* Stamp / Company Stamp */}
         <div style={{ textAlign: 'center' }}>
-          {signatureUrl ? (
-            <div style={{ position: 'relative' }}>
-              <img
-                src={signatureUrl}
-                alt="Bedrijfsstempel"
-                style={{
-                  maxHeight: `${80 * s}px`,
-                  maxWidth: `${160 * s}px`,
-                  objectFit: 'contain',
-                  transform: 'rotate(-2deg)',
-                }}
-                crossOrigin="use-credentials"
-              />
-              <div style={{
-                position: 'absolute', top: `${-6 * s}px`, right: `${-6 * s}px`,
-                width: `${20 * s}px`, height: `${20 * s}px`,
-                background: '#16a34a', borderRadius: '50%',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'white', fontSize: `${12 * s}px`, fontWeight: 800,
-              }}>&#10003;</div>
+          {stampData && (stampData.stamp_company_name || stampData.stamp_address || stampData.stamp_phone || stampData.stamp_whatsapp) ? (
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: `${8 * s}px`,
+              border: `${2 * s}px solid #8B1A1A`,
+              padding: `${6 * s}px ${10 * s}px`,
+              background: 'white',
+            }}>
+              {/* House Icon SVG */}
+              <svg
+                width={`${40 * s}`}
+                height={`${36 * s}`}
+                viewBox="0 0 52 48"
+                fill="none"
+              >
+                <rect x="18" y="18" width="28" height="24" fill="#8B1A1A" />
+                <polygon points="18,18 32,4 46,18" fill="#8B1A1A" />
+                <rect x="22" y="6" width="5" height="10" fill="#8B1A1A" />
+                <rect x="4" y="22" width="24" height="22" fill="#8B1A1A" />
+                <polygon points="4,22 16,10 28,22" fill="#8B1A1A" />
+                <rect x="34" y="24" width="6" height="6" fill="white" />
+                <rect x="34" y="34" width="6" height="6" fill="white" />
+                <rect x="8" y="28" width="6" height="6" fill="white" />
+                <rect x="18" y="28" width="6" height="6" fill="white" />
+                <rect x="8" y="38" width="6" height="6" fill="white" />
+                <rect x="18" y="38" width="6" height="6" fill="white" />
+              </svg>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: `${1 * s}px` }}>
+                {stampData.stamp_company_name && (
+                  <span style={{ fontSize: `${9 * s}px`, fontWeight: 700, color: '#8B1A1A', fontFamily: 'sans-serif', whiteSpace: 'nowrap' }}>
+                    {stampData.stamp_company_name}
+                  </span>
+                )}
+                {stampData.stamp_address && (
+                  <span style={{ fontSize: `${8 * s}px`, color: '#8B1A1A', fontFamily: 'sans-serif', whiteSpace: 'nowrap' }}>
+                    {stampData.stamp_address}
+                  </span>
+                )}
+                {stampData.stamp_phone && (
+                  <span style={{ fontSize: `${8 * s}px`, color: '#8B1A1A', fontFamily: 'sans-serif', whiteSpace: 'nowrap' }}>
+                    Tel : {stampData.stamp_phone}
+                  </span>
+                )}
+                {stampData.stamp_whatsapp && (
+                  <span style={{ fontSize: `${8 * s}px`, color: '#8B1A1A', fontFamily: 'sans-serif', whiteSpace: 'nowrap' }}>
+                    Whatsapp : {stampData.stamp_whatsapp}
+                  </span>
+                )}
+              </div>
             </div>
           ) : (
             <div style={{

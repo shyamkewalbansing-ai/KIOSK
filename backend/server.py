@@ -101,6 +101,10 @@ class PaymentCreate(BaseModel):
 class CompanySettingsUpdate(BaseModel):
     billing_day_of_month: Optional[int] = None
     late_fee_amount: Optional[float] = None
+    stamp_company_name: Optional[str] = None
+    stamp_address: Optional[str] = None
+    stamp_phone: Optional[str] = None
+    stamp_whatsapp: Optional[str] = None
 
 class BreakerToggle(BaseModel):
     breaker_id: str
@@ -581,7 +585,10 @@ async def get_company_settings(request: Request):
     return {
         "billing_day_of_month": company.get("billing_day_of_month", 1),
         "late_fee_amount": company.get("late_fee_amount", 0),
-        "signature_uploaded": bool(company.get("signature_data")),
+        "stamp_company_name": company.get("stamp_company_name", ""),
+        "stamp_address": company.get("stamp_address", ""),
+        "stamp_phone": company.get("stamp_phone", ""),
+        "stamp_whatsapp": company.get("stamp_whatsapp", ""),
     }
 
 @api_router.put("/company/settings")
@@ -596,6 +603,14 @@ async def update_company_settings(data: CompanySettingsUpdate, request: Request)
         if data.late_fee_amount < 0:
             raise HTTPException(status_code=400, detail="Boetebedrag kan niet negatief zijn")
         update_data["late_fee_amount"] = data.late_fee_amount
+    if data.stamp_company_name is not None:
+        update_data["stamp_company_name"] = data.stamp_company_name
+    if data.stamp_address is not None:
+        update_data["stamp_address"] = data.stamp_address
+    if data.stamp_phone is not None:
+        update_data["stamp_phone"] = data.stamp_phone
+    if data.stamp_whatsapp is not None:
+        update_data["stamp_whatsapp"] = data.stamp_whatsapp
     if update_data:
         await db.companies.update_one(
             {"company_id": company["company_id"]},
@@ -603,50 +618,16 @@ async def update_company_settings(data: CompanySettingsUpdate, request: Request)
         )
     return {"message": "Instellingen bijgewerkt"}
 
-@api_router.post("/company/signature")
-async def upload_company_signature(request: Request, file: UploadFile = File(...)):
-    company = await get_current_company(request)
-    content = await file.read()
-    if len(content) > 5 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="Bestand te groot (max 5MB)")
-    if file.content_type not in ["image/png", "image/jpeg", "image/jpg", "image/webp"]:
-        raise HTTPException(status_code=400, detail="Alleen PNG, JPG of WEBP toegestaan")
-    encoded = base64.b64encode(content).decode()
-    await db.companies.update_one(
-        {"company_id": company["company_id"]},
-        {"$set": {"signature_data": encoded, "signature_content_type": file.content_type}}
-    )
-    return {"message": "Handtekening/stempel geüpload"}
-
-@api_router.delete("/company/signature")
-async def delete_company_signature(request: Request):
-    company = await get_current_company(request)
-    await db.companies.update_one(
-        {"company_id": company["company_id"]},
-        {"$unset": {"signature_data": "", "signature_content_type": ""}}
-    )
-    return {"message": "Handtekening/stempel verwijderd"}
-
-@api_router.get("/company/signature/image")
-async def get_company_signature_image(request: Request):
-    company = await get_current_company(request)
-    sig_data = company.get("signature_data")
-    if not sig_data:
-        raise HTTPException(status_code=404, detail="Geen handtekening gevonden")
-    from fastapi.responses import Response as RawResponse
-    file_data = base64.b64decode(sig_data)
-    return RawResponse(content=file_data, media_type=company.get("signature_content_type", "image/png"))
-
-@api_router.get("/kiosk/{company_id}/company/signature")
-async def kiosk_get_company_signature(company_id: str):
+@api_router.get("/kiosk/{company_id}/company/stamp")
+async def kiosk_get_company_stamp(company_id: str):
     await check_company_subscription(company_id)
     company = await db.companies.find_one({"company_id": company_id}, {"_id": 0})
-    sig_data = company.get("signature_data")
-    if not sig_data:
-        raise HTTPException(status_code=404, detail="Geen handtekening gevonden")
-    from fastapi.responses import Response as RawResponse
-    file_data = base64.b64decode(sig_data)
-    return RawResponse(content=file_data, media_type=company.get("signature_content_type", "image/png"))
+    return {
+        "stamp_company_name": company.get("stamp_company_name", ""),
+        "stamp_address": company.get("stamp_address", ""),
+        "stamp_phone": company.get("stamp_phone", ""),
+        "stamp_whatsapp": company.get("stamp_whatsapp", ""),
+    }
 
 @api_router.post("/company/apply-late-fees")
 async def apply_late_fees(request: Request):

@@ -1,0 +1,84 @@
+{
+  "summary": "Comprehensive testing completed for iteration 6 features: 1) Rent month (Huurmaand) display on Tenant Management page, 2) Text-based stamp configurator replacing image-based signature upload. All 11 backend API tests passed (100%). Frontend UI testing verified all new features working correctly.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": [
+    "1. GET /api/company/settings returns stamp text fields (stamp_company_name, stamp_address, stamp_phone, stamp_whatsapp)",
+    "2. PUT /api/company/settings saves stamp text fields correctly",
+    "3. PUT /api/company/settings allows partial updates of stamp fields",
+    "4. PUT /api/company/settings allows empty stamp fields",
+    "5. GET /api/kiosk/{company_id}/company/stamp returns stamp data for kiosk (no auth required)",
+    "6. GET /api/kiosk/invalid_company/company/stamp returns 404",
+    "7. POST /api/company/signature returns 404 (old endpoint removed)",
+    "8. GET /api/company/signature/image returns 404 (old endpoint removed)",
+    "9. DELETE /api/company/signature returns 404 (old endpoint removed)",
+    "10. GET /api/tenants returns tenant data with required fields",
+    "11. GET /api/payments returns payments list",
+    "12. Frontend: Tenant Management page shows 'Huurmaand: maart 2026' label at top",
+    "13. Frontend: Each tenant card shows 'Maand' column with current month (mrt 2026)",
+    "14. Frontend: Company Settings page has 4 stamp text input fields (Bedrijfsnaam, Adres, Telefoon, WhatsApp)",
+    "15. Frontend: Live stamp preview renders with house icon + text as you type",
+    "16. Frontend: Stamp preview shows dark red (#8B1A1A) border with house icon on left, text on right",
+    "17. Frontend: Save stamp button works with toast confirmation 'Instellingen opgeslagen'",
+    "18. Frontend: Payment History kwitantie dialog shows stamp with house icon and company text",
+    "19. Frontend: Kiosk page loads correctly at /kiosk/comp_demo",
+    "20. API: Kiosk stamp endpoint returns saved stamp data"
+  ],
+
+  "test_report_links": [
+    "/app/backend/tests/test_stamp_and_month.py",
+    "/app/test_reports/pytest/stamp_month_results.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [],
+
+  "updated_files": [
+    "/app/backend/tests/test_stamp_and_month.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (11/11 tests passed)",
+    "frontend": "100%"
+  },
+
+  "test_credentials": {
+    "company_admin": "email=demo@vastgoed.sr, password=demo123, company_id=comp_demo",
+    "super_admin": "email=admin@facturatie.sr, password=Bharat7755",
+    "demo_tenants": "HUR001 (ten_001), HUR002 (ten_002), HUR003 (ten_003), HUR004 (ten_004)"
+  },
+
+  "seed_data_creation": "Stamp data saved during testing: Stichting : Perraysarbha, Kewalbasingweg .nr.7, Tel: 8624141, WhatsApp: 0620540162",
+
+  "retest_needed": false,
+
+  "should_main_agent_self_test": false,
+
+  "context_for_next_testing_agent": "Iteration 6 features fully tested: 1) Rent month display on Huurders page - shows 'Huurmaand: [month year]' at top and 'Maand' column per tenant card, 2) Text-based stamp configurator - 4 input fields (bedrijfsnaam, adres, telefoon, whatsapp) with live preview showing dark red house icon + text. Old signature upload endpoints removed (404). Stamp data persists and shows on kwitanties in both admin and kiosk. Tuya Breaker Panel remains MOCKED (UI-only).",
+
+  "mocked_apis": {
+    "Tuya Breaker Panel": "UI-only mock - no real Tuya integration"
+  },
+
+  "features_verified": {
+    "rent_month_label_at_top": true,
+    "rent_month_per_tenant_card": true,
+    "stamp_text_inputs": true,
+    "stamp_live_preview": true,
+    "stamp_save_functionality": true,
+    "stamp_on_kwitantie": true,
+    "kiosk_stamp_endpoint": true,
+    "old_signature_endpoints_removed": true
+  }
+}

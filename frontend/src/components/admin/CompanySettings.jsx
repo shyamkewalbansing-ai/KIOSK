@@ -1,25 +1,99 @@
-import { useState, useEffect, useRef } from 'react';
-import { Settings, Upload, Trash2, Save, AlertTriangle, Image } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Settings, Save, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
+function StampPreview({ stamp, scale = 1 }) {
+  const s = scale;
+  const hasContent = stamp.stamp_company_name || stamp.stamp_address || stamp.stamp_phone || stamp.stamp_whatsapp;
+
+  return (
+    <div
+      data-testid="stamp-preview"
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: `${10 * s}px`,
+        border: `${2 * s}px solid #8B1A1A`,
+        padding: `${8 * s}px ${14 * s}px`,
+        background: 'white',
+      }}
+    >
+      {/* House Icon SVG */}
+      <svg
+        width={`${52 * s}`}
+        height={`${48 * s}`}
+        viewBox="0 0 52 48"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        {/* Back house */}
+        <rect x="18" y="18" width="28" height="24" fill="#8B1A1A" />
+        <polygon points="18,18 32,4 46,18" fill="#8B1A1A" />
+        {/* Chimney */}
+        <rect x="22" y="6" width="5" height="10" fill="#8B1A1A" />
+        {/* Front house */}
+        <rect x="4" y="22" width="24" height="22" fill="#8B1A1A" />
+        <polygon points="4,22 16,10 28,22" fill="#8B1A1A" />
+        {/* Windows back house */}
+        <rect x="34" y="24" width="6" height="6" fill="white" />
+        <rect x="34" y="34" width="6" height="6" fill="white" />
+        {/* Windows front house */}
+        <rect x="8" y="28" width="6" height="6" fill="white" />
+        <rect x="18" y="28" width="6" height="6" fill="white" />
+        <rect x="8" y="38" width="6" height="6" fill="white" />
+        <rect x="18" y="38" width="6" height="6" fill="white" />
+      </svg>
+      {/* Text lines */}
+      {hasContent && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: `${1 * s}px` }}>
+          {stamp.stamp_company_name && (
+            <span style={{ fontSize: `${11 * s}px`, fontWeight: 700, color: '#8B1A1A', fontFamily: 'sans-serif', whiteSpace: 'nowrap' }}>
+              {stamp.stamp_company_name}
+            </span>
+          )}
+          {stamp.stamp_address && (
+            <span style={{ fontSize: `${10 * s}px`, color: '#8B1A1A', fontFamily: 'sans-serif', whiteSpace: 'nowrap' }}>
+              {stamp.stamp_address}
+            </span>
+          )}
+          {stamp.stamp_phone && (
+            <span style={{ fontSize: `${10 * s}px`, color: '#8B1A1A', fontFamily: 'sans-serif', whiteSpace: 'nowrap' }}>
+              Tel : {stamp.stamp_phone}
+            </span>
+          )}
+          {stamp.stamp_whatsapp && (
+            <span style={{ fontSize: `${10 * s}px`, color: '#8B1A1A', fontFamily: 'sans-serif', whiteSpace: 'nowrap' }}>
+              Whatsapp : {stamp.stamp_whatsapp}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export { StampPreview };
+
 export default function CompanySettings() {
-  const [settings, setSettings] = useState({ billing_day_of_month: 1, late_fee_amount: 0, signature_uploaded: false });
+  const [settings, setSettings] = useState({
+    billing_day_of_month: 1,
+    late_fee_amount: 0,
+    stamp_company_name: '',
+    stamp_address: '',
+    stamp_phone: '',
+    stamp_whatsapp: '',
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [signaturePreview, setSignaturePreview] = useState(null);
-  const fileInputRef = useRef(null);
 
   useEffect(() => {
     const fetchSettings = async () => {
       try {
         const res = await axios.get(`${API}/company/settings`, { withCredentials: true });
         setSettings(res.data);
-        if (res.data.signature_uploaded) {
-          setSignaturePreview(`${API}/company/signature/image`);
-        }
       } catch (err) { console.error(err); }
       finally { setLoading(false); }
     };
@@ -32,41 +106,16 @@ export default function CompanySettings() {
       await axios.put(`${API}/company/settings`, {
         billing_day_of_month: parseInt(settings.billing_day_of_month) || 1,
         late_fee_amount: parseFloat(settings.late_fee_amount) || 0,
+        stamp_company_name: settings.stamp_company_name || '',
+        stamp_address: settings.stamp_address || '',
+        stamp_phone: settings.stamp_phone || '',
+        stamp_whatsapp: settings.stamp_whatsapp || '',
       }, { withCredentials: true });
       toast.success('Instellingen opgeslagen');
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Fout bij opslaan');
     }
     setSaving(false);
-  };
-
-  const handleSignatureUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const formData = new FormData();
-    formData.append('file', file);
-    try {
-      await axios.post(`${API}/company/signature`, formData, {
-        withCredentials: true,
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      toast.success('Handtekening/stempel geüpload');
-      setSettings(prev => ({ ...prev, signature_uploaded: true }));
-      setSignaturePreview(`${API}/company/signature/image?t=${Date.now()}`);
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Fout bij uploaden');
-    }
-  };
-
-  const handleDeleteSignature = async () => {
-    try {
-      await axios.delete(`${API}/company/signature`, { withCredentials: true });
-      toast.success('Handtekening/stempel verwijderd');
-      setSettings(prev => ({ ...prev, signature_uploaded: false }));
-      setSignaturePreview(null);
-    } catch (err) {
-      toast.error('Fout bij verwijderen');
-    }
   };
 
   const handleApplyLateFees = async () => {
@@ -150,70 +199,100 @@ export default function CompanySettings() {
         </div>
       </div>
 
-      {/* Signature / Stamp */}
+      {/* Stamp Configuration */}
       <div className="bg-white rounded-2xl border-2 border-[#e2e8f0] p-8">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 bg-[#fef3c7] rounded-xl flex items-center justify-center">
-            <Image className="w-6 h-6 text-[#d97706]" />
+          <div className="w-12 h-12 bg-[#fef2f2] rounded-xl flex items-center justify-center">
+            <svg width="24" height="24" viewBox="0 0 52 48" fill="none">
+              <rect x="18" y="18" width="28" height="24" fill="#8B1A1A" />
+              <polygon points="18,18 32,4 46,18" fill="#8B1A1A" />
+              <rect x="4" y="22" width="24" height="22" fill="#8B1A1A" />
+              <polygon points="4,22 16,10 28,22" fill="#8B1A1A" />
+              <rect x="34" y="24" width="6" height="6" fill="white" />
+              <rect x="34" y="34" width="6" height="6" fill="white" />
+              <rect x="8" y="28" width="6" height="6" fill="white" />
+              <rect x="18" y="28" width="6" height="6" fill="white" />
+              <rect x="8" y="38" width="6" height="6" fill="white" />
+              <rect x="18" y="38" width="6" height="6" fill="white" />
+            </svg>
           </div>
           <div>
             <h2 className="text-xl font-extrabold text-[#0f172a]" style={{ fontFamily: 'Manrope, sans-serif' }}>
-              Handtekening / Stempel
+              Bedrijfsstempel
             </h2>
-            <p className="text-sm text-[#94a3b8]">Upload een afbeelding die op kwitanties wordt getoond</p>
+            <p className="text-sm text-[#94a3b8]">Configureer de stempel die op kwitanties wordt getoond</p>
           </div>
         </div>
 
-        {signaturePreview ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Form */}
           <div className="space-y-4">
-            <div className="bg-[#f8fafc] rounded-xl border border-[#e2e8f0] p-6 flex items-center justify-center">
-              <img
-                src={signaturePreview}
-                alt="Handtekening/stempel"
-                className="max-h-32 max-w-full object-contain"
-                data-testid="signature-preview"
-                crossOrigin="use-credentials"
+            <div>
+              <label className="text-sm font-bold text-[#64748b] mb-1 block">Bedrijfsnaam</label>
+              <input
+                data-testid="stamp-name-input"
+                value={settings.stamp_company_name}
+                onChange={(e) => setSettings({ ...settings, stamp_company_name: e.target.value })}
+                className="kiosk-input"
+                placeholder="bijv. Stichting : Perraysarbha"
               />
             </div>
-            <div className="flex gap-3">
-              <button
-                data-testid="change-signature-btn"
-                onClick={() => fileInputRef.current?.click()}
-                className="kiosk-btn-secondary h-12 px-6 text-base"
-              >
-                <Upload className="w-5 h-5 mr-2" />
-                Wijzigen
-              </button>
-              <button
-                data-testid="delete-signature-btn"
-                onClick={handleDeleteSignature}
-                className="kiosk-btn-secondary h-12 px-6 text-base border-red-200 text-[#dc2626] hover:bg-red-50"
-              >
-                <Trash2 className="w-5 h-5 mr-2" />
-                Verwijderen
-              </button>
+            <div>
+              <label className="text-sm font-bold text-[#64748b] mb-1 block">Adres</label>
+              <input
+                data-testid="stamp-address-input"
+                value={settings.stamp_address}
+                onChange={(e) => setSettings({ ...settings, stamp_address: e.target.value })}
+                className="kiosk-input"
+                placeholder="bijv. Kewalbasingweg .nr.7"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-bold text-[#64748b] mb-1 block">Telefoon</label>
+              <input
+                data-testid="stamp-phone-input"
+                value={settings.stamp_phone}
+                onChange={(e) => setSettings({ ...settings, stamp_phone: e.target.value })}
+                className="kiosk-input"
+                placeholder="bijv. 8624141"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-bold text-[#64748b] mb-1 block">WhatsApp</label>
+              <input
+                data-testid="stamp-whatsapp-input"
+                value={settings.stamp_whatsapp}
+                onChange={(e) => setSettings({ ...settings, stamp_whatsapp: e.target.value })}
+                className="kiosk-input"
+                placeholder="bijv. 0620540162"
+              />
             </div>
           </div>
-        ) : (
-          <button
-            data-testid="upload-signature-btn"
-            onClick={() => fileInputRef.current?.click()}
-            className="w-full border-2 border-dashed border-[#cbd5e1] rounded-xl p-8 flex flex-col items-center gap-3 hover:border-[#1e3a8a] hover:bg-[#f8fafc] transition-colors cursor-pointer"
-          >
-            <Upload className="w-10 h-10 text-[#94a3b8]" />
-            <span className="text-base font-bold text-[#64748b]">Klik om afbeelding te uploaden</span>
-            <span className="text-sm text-[#94a3b8]">PNG, JPG of WEBP (max 5MB)</span>
-          </button>
-        )}
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          className="hidden"
-          onChange={handleSignatureUpload}
-          data-testid="signature-file-input"
-        />
+          {/* Live Preview */}
+          <div>
+            <p className="text-sm font-bold text-[#64748b] mb-3">Voorbeeld</p>
+            <div className="bg-[#f8fafc] rounded-xl border border-[#e2e8f0] p-6 flex items-center justify-center min-h-[120px]">
+              {(settings.stamp_company_name || settings.stamp_address || settings.stamp_phone || settings.stamp_whatsapp) ? (
+                <StampPreview stamp={settings} scale={1.5} />
+              ) : (
+                <p className="text-sm text-[#94a3b8]">Vul de velden in om een voorbeeld te zien</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <button
+            data-testid="save-stamp-btn"
+            onClick={handleSaveSettings}
+            disabled={saving}
+            className="kiosk-btn-primary h-12 px-6 text-base"
+          >
+            <Save className="w-5 h-5 mr-2" />
+            {saving ? 'Opslaan...' : 'Stempel opslaan'}
+          </button>
+        </div>
       </div>
     </div>
   );

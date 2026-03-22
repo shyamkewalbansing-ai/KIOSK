@@ -113,7 +113,12 @@ export default function TenantManagement() {
   return (
     <div className="space-y-6" data-testid="tenant-management">
       <div className="flex items-center justify-between">
-        <p className="text-lg text-[#64748b] font-medium">{tenants.length} huurder(s) geregistreerd</p>
+        <div>
+          <p className="text-lg text-[#64748b] font-medium">{tenants.length} huurder(s) geregistreerd</p>
+          <p className="text-sm text-[#94a3b8]" data-testid="current-month-label">
+            Huurmaand: {new Date().toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' })}
+          </p>
+        </div>
         <button data-testid="add-tenant-btn" onClick={openCreate} className="kiosk-tab kiosk-tab-active">
           <Plus className="w-5 h-5 mr-2" /> Nieuwe huurder
         </button>
@@ -156,7 +161,13 @@ export default function TenantManagement() {
               </div>
 
               {/* Financial grid */}
-              <div className="grid grid-cols-4 gap-3 pt-4 border-t border-[#f1f5f9]">
+              <div className="grid grid-cols-5 gap-3 pt-4 border-t border-[#f1f5f9]">
+                <div className="bg-[#eff6ff] rounded-xl p-3 text-center">
+                  <p className="text-xs text-[#94a3b8]">Maand</p>
+                  <p className="text-xs font-bold text-[#1e3a8a]" data-testid={`rent-month-${t.tenant_id}`}>
+                    {new Date().toLocaleDateString('nl-NL', { month: 'short', year: 'numeric' })}
+                  </p>
+                </div>
                 <div className="bg-[#f8fafc] rounded-xl p-3 text-center">
                   <p className="text-xs text-[#94a3b8]">Huur</p>
                   <p className={`text-sm font-extrabold ${t.outstanding_rent > 0 ? 'text-[#dc2626]' : 'text-[#16a34a]'}`}>

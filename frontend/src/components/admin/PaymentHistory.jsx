@@ -24,7 +24,7 @@ export default function PaymentHistory() {
   const [search, setSearch] = useState('');
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [filterMonth, setFilterMonth] = useState('');
-  const [signatureUrl, setSignatureUrl] = useState(null);
+  const [stampData, setStampData] = useState(null);
 
   useEffect(() => {
     const fetchPayments = async () => {
@@ -40,15 +40,13 @@ export default function PaymentHistory() {
   }, [filterMonth]);
 
   useEffect(() => {
-    const checkSignature = async () => {
+    const fetchStamp = async () => {
       try {
         const res = await axios.get(`${API}/company/settings`, { withCredentials: true });
-        if (res.data.signature_uploaded) {
-          setSignatureUrl(`${API}/company/signature/image`);
-        }
+        setStampData(res.data);
       } catch {}
     };
-    checkSignature();
+    fetchStamp();
   }, []);
 
   const filtered = payments.filter(p =>
@@ -207,7 +205,7 @@ export default function PaymentHistory() {
           {/* Kwitantie content */}
           <div className="p-6">
             {selectedPayment && (
-              <ReceiptTicket payment={selectedPayment} preview signatureUrl={signatureUrl} />
+              <ReceiptTicket payment={selectedPayment} preview stampData={stampData} />
             )}
           </div>
         </DialogContent>
@@ -216,7 +214,7 @@ export default function PaymentHistory() {
       {/* Hidden kwitantie for printing from admin */}
       {selectedPayment && (
         <div className="receipt-only">
-          <ReceiptTicket payment={selectedPayment} signatureUrl={signatureUrl} />
+          <ReceiptTicket payment={selectedPayment} stampData={stampData} />
         </div>
       )}
     </div>

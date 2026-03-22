@@ -7,12 +7,14 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export default function ReceiptScreen({ payment, tenant, companyId, onDone }) {
   const [countdown, setCountdown] = useState(8);
-  const [signatureUrl, setSignatureUrl] = useState(null);
+  const [stampData, setStampData] = useState(null);
   const timerRef = useRef(null);
 
   useEffect(() => {
     if (companyId) {
-      setSignatureUrl(`${API}/kiosk/${companyId}/company/signature`);
+      axios.get(`${API}/kiosk/${companyId}/company/stamp`).then(res => {
+        setStampData(res.data);
+      }).catch(() => {});
     }
   }, [companyId]);
 
@@ -114,14 +116,14 @@ export default function ReceiptScreen({ payment, tenant, companyId, onDone }) {
         <div className="hidden lg:flex w-[440px] bg-[#f8fafc] border-l border-[#e2e8f0] flex-col items-center justify-center p-6 overflow-auto">
           <p className="text-xs uppercase tracking-widest text-[#94a3b8] font-bold mb-4 flex-shrink-0">Kwitantie voorbeeld</p>
           <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-sm overflow-hidden w-full max-w-[380px] flex-shrink-0">
-            <ReceiptTicket payment={payment} tenant={tenant} preview signatureUrl={signatureUrl} />
+            <ReceiptTicket payment={payment} tenant={tenant} preview stampData={stampData} />
           </div>
         </div>
       </div>
 
       {/* Hidden A4 kwitantie for printing */}
       <div className="receipt-only">
-        <ReceiptTicket payment={payment} tenant={tenant} signatureUrl={signatureUrl} />
+        <ReceiptTicket payment={payment} tenant={tenant} stampData={stampData} />
       </div>
     </div>
   );
