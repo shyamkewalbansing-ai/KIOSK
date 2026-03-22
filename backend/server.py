@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Request, Response
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, UploadFile, File
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from typing import Optional
 import uuid
 from datetime import datetime, timezone, timedelta
+import base64
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -391,6 +392,7 @@ async def sa_stats(request: Request):
     total_invoices = await db.invoices.count_documents({})
     paid_invoices = await db.invoices.count_documents({"status": "paid"})
     pending_invoices = await db.invoices.count_documents({"status": "pending"})
+    total_proofs = await db.payment_proofs.count_documents({})
     pipeline = [{"$match": {"status": "paid"}}, {"$group": {"_id": None, "total": {"$sum": "$paid_amount"}}}]
     rev = await db.invoices.aggregate(pipeline).to_list(1)
     total_revenue = rev[0]["total"] if rev else 0
@@ -404,12 +406,28 @@ async def sa_stats(request: Request):
         "total_invoices": total_invoices,
         "paid_invoices": paid_invoices,
         "pending_invoices": pending_invoices,
+        "total_proofs": total_proofs,
         "total_revenue": total_revenue,
         "subscription_price": SUBSCRIPTION_PRICE,
         "bank_name": BANK_NAME,
         "bank_account": BANK_ACCOUNT,
         "bank_reference": BANK_REFERENCE,
     }
+
+@api_router.get("/superadmin/payment-proofs")
+async def sa_list_proofs(request: Request):
+    await get_superadmin(request)
+    return await db.payment_proofs.find({}, {"_id": 0, "file_data": 0}).sort("created_at", -1).to_list(200)
+
+@api_router.get("/superadmin/payment-proofs/{proof_id}/file")
+async def sa_get_proof_file(proof_id: str, request: Request):
+    await get_superadmin(request)
+    proof = await db.payment_proofs.find_one({"proof_id": proof_id}, {"_id": 0})
+    if not proof:
+        raise HTTPException(status_code=404, detail="Bewijs niet gevonden")
+    from fastapi.responses import Response as RawResponse
+    file_data = base64.b64decode(proof["file_data"])
+    return RawResponse(content=file_data, media_type=proof.get("content_type", "application/octet-stream"))
 
 # ============ COMPANY AUTH ROUTES ============
 
@@ -479,6 +497,78 @@ async def company_logout(request: Request, response: Response):
         await db.company_sessions.delete_many({"session_token": session_token})
     response.delete_cookie(key="session_token", path="/", secure=True, samesite="none")
     return {"message": "Uitgelogd"}
+
+# ============ SUBSCRIPTION ROUTES (company, protected) ============
+
+@api_router.get("/subscription/status")
+async def subscription_status(request: Request):
+    company = await db.companies.find_one(
+        {"company_id": (await get_current_company(request))["company_id"]},
+        {"_id": 0, "password_hash": 0}
+    )
+    proofs = await db.payment_proofs.find(
+        {"company_id": company["company_id"]},
+        {"_id": 0, "file_data": 0}
+    ).sort("created_at", -1).to_list(20)
+    return {
+        **company,
+        "subscription_price": SUBSCRIPTION_PRICE,
+        "bank_name": BANK_NAME,
+        "bank_account": BANK_ACCOUNT,
+        "bank_reference": BANK_REFERENCE,
+        "payment_proofs": proofs,
+    }
+
+@api_router.post("/subscription/upload-proof")
+async def upload_payment_proof(request: Request, file: UploadFile = File(...)):
+    company = await db.companies.find_one(
+        {"company_id": (await get_current_company(request))["company_id"]},
+        {"_id": 0}
+    )
+    cid = company["company_id"]
+    content = await file.read()
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Bestand te groot (max 10MB)")
+    now = datetime.now(timezone.utc)
+    proof_id = f"proof_{uuid.uuid4().hex[:8]}"
+    await db.payment_proofs.insert_one({
+        "proof_id": proof_id,
+        "company_id": cid,
+        "company_name": company["name"],
+        "filename": file.filename,
+        "content_type": file.content_type,
+        "file_data": base64.b64encode(content).decode(),
+        "amount": SUBSCRIPTION_PRICE,
+        "status": "approved",
+        "created_at": now.isoformat()
+    })
+    inv_count = await db.invoices.count_documents({})
+    invoice_number = f"FAC-{now.strftime('%Y')}-{str(inv_count + 1).zfill(4)}"
+    await db.invoices.insert_one({
+        "invoice_id": f"inv_{uuid.uuid4().hex[:8]}",
+        "invoice_number": invoice_number,
+        "company_id": cid,
+        "company_name": company["name"],
+        "company_email": company.get("email", ""),
+        "amount": SUBSCRIPTION_PRICE,
+        "description": "Maandabonnement Appartement Kiosk",
+        "period_start": now.isoformat(),
+        "period_end": (now + timedelta(days=30)).isoformat(),
+        "status": "paid",
+        "paid_amount": SUBSCRIPTION_PRICE,
+        "paid_at": now.isoformat(),
+        "proof_id": proof_id,
+        "bank_name": BANK_NAME,
+        "bank_account": BANK_ACCOUNT,
+        "bank_reference": BANK_REFERENCE,
+        "created_at": now.isoformat()
+    })
+    sub_end = (now + timedelta(days=30)).isoformat()
+    await db.companies.update_one(
+        {"company_id": cid},
+        {"$set": {"subscription_status": "active", "subscription_end": sub_end}}
+    )
+    return {"message": "Betaling ontvangen. Abonnement geactiveerd voor 30 dagen.", "subscription_end": sub_end}
 
 # ============ APARTMENT ROUTES (admin, protected) ============
 

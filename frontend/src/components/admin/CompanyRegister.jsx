@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Building2, UserPlus, Loader2 } from 'lucide-react';
+import { Building2, UserPlus, Loader2, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 
@@ -37,7 +37,19 @@ export default function CompanyRegister() {
         <h1 className="text-4xl xl:text-5xl font-extrabold text-[#0f172a] mb-3" style={{ fontFamily: 'Manrope, sans-serif' }}>
           Bedrijf Registreren
         </h1>
-        <p className="text-lg text-[#94a3b8] mb-10">Maak een account aan voor uw vastgoedbedrijf</p>
+        <p className="text-lg text-[#94a3b8] mb-4">Maak een account aan voor uw vastgoedbedrijf</p>
+
+        <div className="w-full max-w-md bg-[#eff6ff] border-2 border-[#bfdbfe] rounded-2xl px-6 py-4 mb-8">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-bold text-[#1e3a8a]">Maandabonnement</span>
+            <span className="text-2xl font-extrabold text-[#1e3a8a]">SRD 3.500</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-[#1e3a8a]/80">
+            <CheckCircle className="w-4 h-4 text-green-600" />
+            <span><strong>3 dagen gratis</strong> proefperiode</span>
+          </div>
+          <p className="text-xs text-[#1e3a8a]/60 mt-1">Na de proefperiode betaalt u via bankoverschrijving.</p>
+        </div>
 
         <form onSubmit={handleSubmit} className="w-full max-w-md space-y-4">
           {error && (
